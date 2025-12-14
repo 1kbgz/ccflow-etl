@@ -25,7 +25,14 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 
-dependencies = []
+dependencies = [
+    "ccflow>=0.6.10",
+    "lerna",
+]
+
+[project.entry-points."hydra.lernaplugins"]
+ccflow-etl = "pkg:ccflow_etl.config"
+
 
 [project.optional-dependencies]
 develop = [
@@ -45,6 +52,8 @@ develop = [
 ]
 
 [project.scripts]
+cc-etl = "ccflow_etl.cli:main"
+cc-etl-explain = "ccflow_etl.cli:explain"
 
 [project.urls]
 Repository = "https://github.com/1kbgz/ccflow-etl"

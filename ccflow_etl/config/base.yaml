@@ -1,0 +1,26 @@
+# @package _global_
+
+defaults:
+  - _self_
+  - etl/extract: v1/example
+  - etl/transform: v1/example
+  - etl/load: v1/example
+
+etl:
+  _target_: ccflow_etl.ETL
+  debug: true
+  backfill: null
+
+cli:
+  model:
+    _target_: ccflow.FlowOptions
+    evaluator:
+      _target_: ccflow.evaluators.MultiEvaluator
+      evaluators:
+        - _target_: ccflow.evaluators.GraphEvaluator
+        - _target_: ccflow.evaluators.MemoryCacheEvaluator
+        - _target_: ccflow.evaluators.LoggingEvaluator
+    cacheable: true
+
+callable: /etl
+context: []

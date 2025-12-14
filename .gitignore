@@ -157,3 +157,6 @@ ccflow_etl/labextension
 
 # Rust
 target
+
+# Hydra
+outputs
