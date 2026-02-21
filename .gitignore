@@ -141,14 +141,12 @@ js/node_modules
 js/test-results
 js/playwright-report
 js/*.tgz
-ccflow_etl/extension
 
 # Jupyter
 .ipynb_checkpoints
 .autoversion
 Untitled*.ipynb
-!ccflow_etl/extension/ccflow_etl.json
-!ccflow_etl/extension/install.json
+ccflow_etl/extension
 ccflow_etl/nbextension
 ccflow_etl/labextension
 
@@ -159,4 +157,9 @@ ccflow_etl/labextension
 target
 
 # Hydra
+<<<<<<< before updating
 outputs
+=======
+outputs/
+multirun/
+>>>>>>> after updating
