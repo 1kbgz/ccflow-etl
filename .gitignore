@@ -148,4 +148,12 @@ outputs
 =======
 outputs/
 multirun/
+<<<<<<< before updating
+>>>>>>> after updating
+=======
+
+# AI
+ROADMAP.md
+AGENTS.md
+.github/hooks/sdlc.json
 >>>>>>> after updating
