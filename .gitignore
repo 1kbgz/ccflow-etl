@@ -142,10 +142,11 @@ ccflow_etl/labextension
 # Rust
 target
 
+# AI
+ROADMAP.md
+AGENTS.md
+.github/hooks/sdlc.json
+
 # Hydra
-<<<<<<< before updating
-outputs
-=======
 outputs/
 multirun/
->>>>>>> after updating
