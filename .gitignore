@@ -147,6 +147,7 @@ target
 ROADMAP.md
 AGENTS.md
 .github/hooks/sdlc.json
+.superpowers
 
 # Hydra
 outputs/
