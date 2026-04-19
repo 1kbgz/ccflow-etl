@@ -147,11 +147,8 @@ target
 ROADMAP.md
 AGENTS.md
 .github/hooks/sdlc.json
-<<<<<<< before updating
+.superpowers
 
 # Hydra
 outputs/
 multirun/
-=======
-.superpowers
->>>>>>> after updating
