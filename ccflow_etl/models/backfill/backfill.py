@@ -51,7 +51,7 @@ class BackfillContext(DatetimeRangeContext, Generic[C]):
         import pandas as pd
 
         # reassemble interval string post-validation
-        range = pd.date_range(
+        date_range = pd.date_range(
             start=self.start_datetime,
             end=self.end_datetime,
             freq=f"{self.interval.n}{self.interval.offset}",
@@ -59,9 +59,12 @@ class BackfillContext(DatetimeRangeContext, Generic[C]):
 
         # Adjust for direction
         if self.direction == "backward":
-            range = range.reverse()
+            date_range = date_range.reverse()
 
-        return range
+        return date_range
+
+    def step_contexts(self) -> List[C]:
+        return [self.context.model_copy(update={"datetime": step, "dt": step, "date": step.date()}) for step in self.steps(as_array=False)]
 
 
 class BackfillResult(GenericResult): ...
@@ -89,17 +92,14 @@ class BackfillModel(CallableModel, Generic[C, R]):
 
     @Flow.deps
     def __deps__(self, context: BackfillContext[C]) -> List[Tuple[CallableModelGenericType[C, R], List[ContextType]]]:
-        contexts = []
-        for step in context.steps(as_array=False):
-            contexts.append(context.context.model_copy(update={"datetime": step, "dt": step, "date": step.date()}))
-        self._steps = contexts
-        return [(self.model, contexts)]
+        self._steps = context.step_contexts()
+        return [(self.model, self._steps)]
 
     @Flow.call
     def __call__(self, context: BackfillContext[C]) -> R:
         result = {}
         print("This should happen after all calls and be cached")
         print("You should not see any further executes if using caching evaluator!")
-        for step in self._steps:
+        for step in self._steps or context.step_contexts():
             self.model(context=step)
         return BackfillResult(value=result)
