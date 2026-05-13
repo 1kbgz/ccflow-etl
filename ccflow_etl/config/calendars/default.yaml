@@ -1,0 +1,19 @@
+# @package calendars
+
+daily:
+  _target_: ccflow_etl.DailyCalendar
+
+hourly:
+  _target_: ccflow_etl.HourlyCalendar
+
+weekly:
+  _target_: ccflow_etl.WeeklyCalendar
+
+weekdays:
+  _target_: ccflow_etl.WeekdayCalendar
+
+business_daily:
+  _target_: ccflow_etl.BusinessDayCalendar
+
+monday_friday:
+  _target_: ccflow_etl.MondayFridayCalendar

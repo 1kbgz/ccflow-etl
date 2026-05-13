@@ -2,14 +2,11 @@
 
 defaults:
   - _self_
-  - etl/extract: v1/example
-  - etl/transform: v1/example
-  - etl/load: v1/example
+  - callable: local_json_write
+  - optional backfill: null
 
-etl:
-  _target_: ccflow_etl.ETL
-  debug: true
-  backfill: null
+model:
+  _target_: ccflow_etl.LocalJSONWriteModel
 
 cli:
   model:
@@ -21,6 +18,3 @@ cli:
         - _target_: ccflow.evaluators.MemoryCacheEvaluator
         - _target_: ccflow.evaluators.LoggingEvaluator
     cacheable: true
-
-callable: /etl
-context: []

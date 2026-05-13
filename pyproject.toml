@@ -31,7 +31,8 @@ classifiers = [
 
 dependencies = [
     "ccflow>=0.8.3",
-    "lerna",
+    "hydra",
+    "pydantic",
 ]
 
 [project.entry-points."hydra.lernaplugins"]
@@ -54,6 +55,8 @@ develop = [
     "ty",
     "uv",
     "wheel",
+    # tests and extras
+    "lerna",
 ]
 
 [project.scripts]
@@ -119,6 +122,11 @@ addopts = [
     "--junitxml=junit.xml",
 ]
 testpaths = "ccflow_etl/tests"
+markers = [
+    "integration: cross-package tests using only local synthetic fixtures",
+    "e2e: complete local workflow tests using only synthetic fixtures and local storage",
+    "live: tests requiring live provider credentials or external infrastructure",
+]
 
 [tool.ruff]
 line-length = 150
