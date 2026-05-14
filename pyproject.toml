@@ -32,6 +32,7 @@ classifiers = [
 dependencies = [
     "ccflow>=0.8.3",
     "lerna",
+    "pandas",
 ]
 
 [project.entry-points."hydra.lernaplugins"]
@@ -119,6 +120,11 @@ addopts = [
     "--junitxml=junit.xml",
 ]
 testpaths = "ccflow_etl/tests"
+markers = [
+    "integration: cross-package tests using only local synthetic fixtures",
+    "e2e: complete local workflow tests using only synthetic fixtures and local storage",
+    "live: tests requiring live provider credentials or external infrastructure",
+]
 
 [tool.ruff]
 line-length = 150
