@@ -146,14 +146,9 @@ emsdk
 # Mac
 .DS_Store
 
-<<<<<<< before updating
-# Rust
-target
-=======
 # Hydra
 outputs/
 multirun/
->>>>>>> after updating
 
 # AI
 ROADMAP.md
