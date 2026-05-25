@@ -1,0 +1,87 @@
+```{toctree}
+---
+caption: ""
+maxdepth: 2
+hidden: true
+---
+
+
+
+docs/src/cli.md
+
+docs/src/pipelines.md
+
+docs/src/backfills.md
+
+docs/src/handoffs.md
+
+docs/src/development.md
+
+docs/src/api.md
+
+
+```
+
+# ccflow-etl
+
+Domain-neutral ETL building blocks for `ccflow` callable models.
+
+[![Build Status](https://github.com/1kbgz/ccflow-etl/actions/workflows/build.yaml/badge.svg?branch=main&event=push)](https://github.com/1kbgz/ccflow-etl/actions/workflows/build.yaml)
+[![codecov](https://codecov.io/gh/1kbgz/ccflow-etl/branch/main/graph/badge.svg)](https://codecov.io/gh/1kbgz/ccflow-etl)
+[![License](https://img.shields.io/github/license/1kbgz/ccflow-etl)](https://github.com/1kbgz/ccflow-etl)
+[![PyPI](https://img.shields.io/pypi/v/ccflow-etl.svg)](https://pypi.python.org/pypi/ccflow-etl)
+
+`ccflow-etl` provides reusable support primitives for ETL-style workflows built as concrete `ccflow` `CallableModel` graphs. It keeps generic execution concerns here and leaves workflow-specific behavior to the package or application that owns the workflow.
+
+## Install
+
+```bash
+pip install ccflow-etl
+```
+
+Connector-backed cache and checkpoint stores are provided by connector packages that own their I/O:
+
+| Package         | Type               | Integration                                   |
+| --------------- | ------------------ | --------------------------------------------- |
+| `ccflow-s3`     | generic, cache     | S3-backed cache and checkpoint store          |
+| `ccflow-db`     | generic, cache     | database-backed cache and checkpoint store    |
+| `ccflow-email`  | generic, publisher | email publishers for ETL notifications        |
+| `ccflow-celery` | generic, evaluator | Celery-based evaluator for ETL task execution |
+
+## Quick Start
+
+`ccflow-etl` installs shared Hydra entry points for running and explaining configured callables:
+
+```bash
+cc-etl +context.path=./example-output.json +context.payload.message='hello from ccflow-etl' +context.overwrite=true
+cc-etl-explain +context.path=./example-output.json
+```
+
+Most projects provide their own config directory and still use the shared entry point:
+
+```bash
+cc-etl --config-path ./config --config-name text_stats +context.input_path=./notes.txt +context.output_path=./stats.json
+```
+
+## What It Provides
+
+- Shared CLI entry points: `cc-etl` and `cc-etl-explain`.
+- Date expansion: `Interval`, `BaseCalendar`, built-in calendars, `BackfillContext`, and `BackfillModel`.
+- Handoff metadata: `ETLArtifact` for typed stage artifacts.
+- Format-aware writes and cache handoffs: `LocalWriteModel`, `CachePutModel`, `CacheGetModel`, `PayloadCodec`, and `LocalCacheStore`.
+- Checkpointing: `CheckpointRecord`, checkpoint statuses, and `CheckpointDecisionModel` for idempotent skip decisions.
+- Retry orchestration: `RetryPolicy`, `RetryModel`, retry event summaries, timeout categories, and backoff/jitter helpers.
+- Run reporting: `RunSummary` for structured counts by status and artifact stage.
+
+## Documentation
+
+- [CLI And Config](docs/src/cli.md)
+- [Building Pipelines](docs/src/pipelines.md)
+- [Backfills And Calendars](docs/src/backfills.md)
+- [Handoffs, Formats, And Reliability](docs/src/handoffs.md)
+- [API Reference](docs/src/api.md)
+- [Development](docs/src/development.md)
+
+## Package Boundaries
+
+`ccflow-etl` owns domain-neutral ETL contracts and helpers. It does not own application workflows, provider clients, connector clients, credentials, or domain-specific rules. Durable store implementations should live in connector packages and integrate through the generic cache and checkpoint contracts.
