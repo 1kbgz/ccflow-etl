@@ -33,6 +33,7 @@ dependencies = [
     "ccflow>=0.8.3",
     "hydra",
     "pydantic",
+    "pyarrow",
 ]
 
 [project.entry-points."hydra.lernaplugins"]
