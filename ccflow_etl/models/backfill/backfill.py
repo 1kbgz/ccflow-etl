@@ -32,7 +32,7 @@ R = TypeVar("R", bound=ResultBase)
 
 
 class BackfillContext(DatetimeRangeContext, Generic[C]):
-    context: SerializeAsAny[C] = Field(default_factory=GenericContext)
+    template: SerializeAsAny[C] = Field(default_factory=GenericContext)
     direction: Literal["forward", "backward"] = "forward"
     interval: Interval = Field(default_factory=lambda: Interval.model_validate("1D"), description="Interval between each backfill step")
     calendar: Optional[SerializeAsAny[BaseCalendar]] = Field(default=None, description="Calendar that provides backfill steps")
@@ -57,24 +57,22 @@ class BackfillContext(DatetimeRangeContext, Generic[C]):
             items = list(v)
             if len(items) not in {2, 3, 4, 5}:
                 raise ValueError(
-                    "backfill context list must be [start, end], [start, end, context], or [start, end, context, direction, interval_or_calendar]"
+                    "backfill context list must be [start, end], [start, end, template], or [start, end, template, direction, interval_or_calendar]"
                 )
             start_datetime = items[0]
             end_datetime = items[1]
-            child_context = items[2] if len(items) >= 3 else None
+            template = items[2] if len(items) >= 3 else None
             direction = items[3] if len(items) >= 4 else "forward"
             interval_or_calendar = items[4] if len(items) >= 5 else None
-            if child_context is None or (
-                isinstance(child_context, Sequence) and not isinstance(child_context, (str, bytes, bytearray)) and len(child_context) == 0
-            ):
-                child_context = {"date": start_datetime}
-            elif isinstance(child_context, Mapping):
-                child_context = dict(child_context)
-                child_context.setdefault("date", start_datetime)
+            if template is None or (isinstance(template, Sequence) and not isinstance(template, (str, bytes, bytearray)) and len(template) == 0):
+                template = {"date": start_datetime}
+            elif isinstance(template, Mapping):
+                template = dict(template)
+                template.setdefault("date", start_datetime)
             backfill_context = {
                 "start_datetime": start_datetime,
                 "end_datetime": end_datetime,
-                "context": child_context,
+                "template": template,
                 "direction": direction,
             }
             if cls._is_calendar_value(interval_or_calendar):
@@ -96,6 +94,8 @@ class BackfillContext(DatetimeRangeContext, Generic[C]):
         if not isinstance(v, Mapping):
             return v
         v = dict(v)
+        if "context" in v:
+            raise ValueError("BackfillContext.context was renamed to BackfillContext.template")
         if v.get("direction") not in (None, "forward", "backward"):
             raise ValueError("direction must be either 'forward' or 'backward'")
         # Validate interval to not confuse ccflow
@@ -127,7 +127,7 @@ class BackfillContext(DatetimeRangeContext, Generic[C]):
         return date_range
 
     def step_contexts(self) -> List[C]:
-        return [self.context.model_copy(update={"datetime": step, "dt": step, "date": step.date()}) for step in self.steps(as_array=False)]
+        return [self.template.model_copy(update={"datetime": step, "dt": step, "date": step.date()}) for step in self.steps(as_array=False)]
 
 
 class BackfillResult(GenericResult): ...

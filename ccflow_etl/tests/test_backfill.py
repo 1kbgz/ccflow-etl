@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Type
 
+import pytest
 from ccflow import CallableModel, ContextType, DateContext, Flow, GenericResult, ResultType
 
 from ccflow_etl import BackfillContext, BackfillModel, WeekdayCalendar
@@ -13,7 +14,7 @@ def test_backfill_context_builds_business_day_contexts():
         start_datetime="2024-01-05",
         end_datetime="2024-01-09",
         interval="1B",
-        context=DateContext(date="2024-01-01"),
+        template=DateContext(date="2024-01-01"),
     )
 
     step_contexts = context.step_contexts()
@@ -28,8 +29,19 @@ def test_backfill_context_accepts_cli_date_range_list_for_daily_contexts():
     assert context.end_datetime.date() == date(2024, 1, 4)
     assert context.interval.offset == "D"
     assert context.interval.n == 1
-    assert context.context.date == date(2024, 1, 2)
+    assert context.template.date == date(2024, 1, 2)
     assert [step.date for step in context.step_contexts()] == [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 4)]
+
+
+def test_backfill_context_rejects_legacy_nested_context_field():
+    with pytest.raises(ValueError, match="context"):
+        BackfillContext[DateContext].model_validate(
+            {
+                "start_datetime": "2024-01-05",
+                "end_datetime": "2024-01-09",
+                "context": {"date": "2024-01-01"},
+            }
+        )
 
 
 def test_backfill_context_returns_steps_in_backward_direction():
@@ -44,7 +56,7 @@ def test_backfill_context_uses_explicit_calendar_for_steps():
             "start_datetime": "2024-01-05",
             "end_datetime": "2024-01-09",
             "calendar": WeekdayCalendar(),
-            "context": {"date": "2024-01-01"},
+            "template": {"date": "2024-01-01"},
         }
     )
 

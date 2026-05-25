@@ -9,4 +9,3 @@ backfill:
   model: /model
 
 callable: /backfill
-context: null

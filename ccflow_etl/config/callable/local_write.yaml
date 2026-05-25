@@ -1,8 +1,3 @@
 # @package _global_
 
 callable: /model
-context:
-  path: ccflow-etl-example.json
-  payload:
-    message: hello from ccflow-etl
-  overwrite: true
