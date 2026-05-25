@@ -1,5 +1,0 @@
-# @package etl.load
-
-defaults: []
-
-_target_: ccflow_etl.LoadModel

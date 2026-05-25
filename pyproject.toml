@@ -31,13 +31,13 @@ classifiers = [
 
 dependencies = [
     "ccflow>=0.8.3",
-    "lerna",
-    "pandas",
+    "hydra-core",
+    "pydantic",
+    "pyarrow",
 ]
 
 [project.entry-points."hydra.lernaplugins"]
 ccflow-etl = "pkg:ccflow_etl.config"
-
 
 [project.optional-dependencies]
 develop = [
@@ -55,6 +55,8 @@ develop = [
     "ty",
     "uv",
     "wheel",
+    # tests and extras
+    "lerna",
 ]
 
 [project.scripts]

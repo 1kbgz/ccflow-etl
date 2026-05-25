@@ -1,23 +1,68 @@
-from typing import List
+from collections import Counter
+from typing import Any, Dict, Iterable, Literal, Optional
 
-from ccflow import ContextBase, ResultBase
+from ccflow import BaseModel
+from pydantic import Field
 
 __all__ = (
-    "ETLContext",
-    "ETLResult",
+    "ETLArtifact",
+    "ETLStage",
+    "RunSummary",
 )
 
 
-class ETLContext(ContextBase):
-    extract: List["ETLContext"] = []
-    transform: List["ETLContext"] = []
-    load: List["ETLContext"] = []
+ETLStage = Literal["plan", "extract", "transform", "load"]
 
 
-class ETLResult(ResultBase):
-    step: str = "unknown"
-    status: str = "unknown"
+class ETLArtifact(BaseModel):
+    key: str
+    stage: ETLStage
+    status: str = "planned"
+    dataset: Optional[str] = None
+    uri: Optional[str] = None
+    media_type: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
-    extract: List["ETLResult"] = []
-    transform: List["ETLResult"] = []
-    load: List["ETLResult"] = []
+
+class RunSummary(BaseModel):
+    total: int = 0
+    planned: int = 0
+    skipped: int = 0
+    succeeded: int = 0
+    failed: int = 0
+    retried: int = 0
+    cancelled: int = 0
+    by_status: Dict[str, int] = Field(default_factory=dict)
+    by_stage: Dict[str, int] = Field(default_factory=dict)
+
+    @classmethod
+    def from_statuses(cls, statuses: Iterable[Optional[str]], artifacts: Iterable[ETLArtifact | dict] = ()) -> "RunSummary":
+        normalized_statuses = [status for status in statuses if status]
+        by_status = dict(sorted(Counter(normalized_statuses).items()))
+        artifact_stages = [artifact.stage if isinstance(artifact, ETLArtifact) else artifact.get("stage") for artifact in artifacts]
+        by_stage = dict(sorted(Counter(stage for stage in artifact_stages if stage).items()))
+        return cls(
+            total=len(normalized_statuses),
+            planned=by_status.get("planned", 0),
+            skipped=sum(by_status.get(status, 0) for status in ("checkpoint", "database", "exists", "skipped")),
+            succeeded=sum(by_status.get(status, 0) for status in ("succeeded", "success", "updated", "upserted", "written")),
+            failed=by_status.get("failed", 0),
+            retried=by_status.get("retried", 0),
+            cancelled=by_status.get("cancelled", 0),
+            by_status=by_status,
+            by_stage=by_stage,
+        )
+
+    @classmethod
+    def from_items(cls, items: Iterable[dict], artifacts: Iterable[ETLArtifact | dict] = ()) -> "RunSummary":
+        return cls.from_statuses((item.get("status") for item in items), artifacts=artifacts)
+
+    def legacy_counts(self) -> Dict[str, int]:
+        return {
+            "planned": self.planned,
+            "skipped": self.skipped,
+            "succeeded": self.succeeded,
+            "failed": self.failed,
+            "retried": self.retried,
+            "cancelled": self.cancelled,
+        }
