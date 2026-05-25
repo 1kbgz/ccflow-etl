@@ -1,48 +1,66 @@
-import json
 from pathlib import Path
 from typing import Any, Literal, Type
 from uuid import uuid4
 
 from ccflow import CallableModel, ContextBase, ContextType, Flow, ResultBase, ResultType
 
+from .formats import CacheFormat, PayloadCodec
+
 __all__ = (
-    "LocalJSONWriteContext",
-    "LocalJSONWriteModel",
-    "LocalJSONWriteResult",
+    "LocalWriteContext",
+    "LocalWriteModel",
+    "LocalWriteResult",
+    "WriteContext",
+    "WriteModel",
+    "WriteResult",
 )
 
 
-class LocalJSONWriteContext(ContextBase):
-    path: Path
+class WriteContext(ContextBase):
     payload: Any
     overwrite: bool = False
 
 
-class LocalJSONWriteResult(ResultBase):
-    path: str
+class WriteResult(ResultBase):
     status: Literal["written", "exists"]
 
 
-class LocalJSONWriteModel(CallableModel):
+class WriteModel(CallableModel):
+    format: CacheFormat = "json"
+
+    @property
+    def codec(self) -> PayloadCodec:
+        return PayloadCodec(format=self.format)
+
+
+class LocalWriteContext(WriteContext):
+    path: Path
+
+
+class LocalWriteResult(WriteResult):
+    path: str
+
+
+class LocalWriteModel(WriteModel):
     @property
     def context_type(self) -> Type[ContextType]:
-        return LocalJSONWriteContext
+        return LocalWriteContext
 
     @property
     def result_type(self) -> Type[ResultType]:
-        return LocalJSONWriteResult
+        return LocalWriteResult
 
     @Flow.call
-    def __call__(self, context: LocalJSONWriteContext) -> LocalJSONWriteResult:
+    def __call__(self, context: LocalWriteContext) -> LocalWriteResult:
         if context.path.exists() and not context.overwrite:
-            return LocalJSONWriteResult(path=str(context.path), status="exists")
+            return LocalWriteResult(path=str(context.path), status="exists")
 
         context.path.parent.mkdir(parents=True, exist_ok=True)
         temp_path = context.path.with_name(f".{context.path.name}.{uuid4().hex}.tmp")
         try:
-            temp_path.write_text(json.dumps(context.payload, indent=2, sort_keys=True) + "\n")
+            temp_path.write_bytes(self.codec.encode(context.payload))
             temp_path.replace(context.path)
         except Exception:
             temp_path.unlink(missing_ok=True)
             raise
-        return LocalJSONWriteResult(path=str(context.path), status="written")
+        return LocalWriteResult(path=str(context.path), status="written")

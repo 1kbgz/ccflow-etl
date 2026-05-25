@@ -1,12 +1,15 @@
 import json
 
-from ccflow_etl import ETLArtifact, LocalJSONCacheGetContext, LocalJSONCacheGetModel, LocalJSONCachePutContext, LocalJSONCachePutModel, RunSummary
+from ccflow_etl import CacheGetContext, CacheGetModel, CachePutContext, CachePutModel, ETLArtifact, LocalCacheStore, RunSummary
 
 
-def test_local_json_cache_put_and_get_exposes_typed_artifacts(tmp_path):
+def test_local_cache_put_and_get_exposes_typed_artifacts(tmp_path):
     cache_path = tmp_path / "massive" / "stocks" / "raw" / "2024-01-03" / "AAA.json"
+    store = LocalCacheStore()
 
-    put_result = LocalJSONCachePutModel()(LocalJSONCachePutContext(path=cache_path, payload={"ticker": "AAA"}, dataset="stocks", stage="extract"))
+    put_result = CachePutModel(store=store, format="json")(
+        CachePutContext(path=cache_path, payload={"ticker": "AAA"}, dataset="stocks", stage="extract")
+    )
 
     assert put_result.status == "written"
     assert put_result.artifact == ETLArtifact(
@@ -18,7 +21,7 @@ def test_local_json_cache_put_and_get_exposes_typed_artifacts(tmp_path):
         status="written",
     )
 
-    get_result = LocalJSONCacheGetModel()(LocalJSONCacheGetContext(path=cache_path, dataset="stocks", stage="extract"))
+    get_result = CacheGetModel(store=store, format="json")(CacheGetContext(path=cache_path, dataset="stocks", stage="extract"))
 
     assert get_result.status == "hit"
     assert get_result.payload == {"ticker": "AAA"}

@@ -30,10 +30,6 @@ def _normalize_config_path_argv(argv: list[str]) -> list[str]:
             normalized.append(f"{key}={_normalize_config_path(value)}")
         elif index > 0 and argv[index - 1] in {"--config-path", "-cp"}:
             normalized.append(_normalize_config_path(arg))
-        elif arg.startswith("+callable="):
-            normalized.append(arg[1:])
-        elif any(arg.startswith(f"+backfill.{key}=") for key in ("start_datetime", "end_datetime", "direction", "interval")):
-            normalized.append(arg[1:])
         else:
             normalized.append(arg)
     return normalized

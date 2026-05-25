@@ -6,14 +6,14 @@ from unittest.mock import patch
 from ccflow.utils.hydra import cfg_run, load_config as base_load_config
 
 import ccflow_etl
-from ccflow_etl import BackfillModel, DailyCalendar, LocalJSONWriteModel, WeekdayCalendar, load_config
+from ccflow_etl import BackfillModel, DailyCalendar, LocalWriteModel, WeekdayCalendar, load_config
 from ccflow_etl.cli import main
 
 
 class TestBasic:
     def test_basic_example(self):
         cfg = load_config([], overwrite=True)
-        assert isinstance(cfg["model"], LocalJSONWriteModel)
+        assert isinstance(cfg["model"], LocalWriteModel)
 
     def test_skeletal_stage_shells_are_not_exported(self):
         for name in ("ETL", "ETLContext", "ETLResult", "ExtractModel", "TransformModel", "LoadModel"):
@@ -31,7 +31,7 @@ class TestBasic:
         with patch.object(
             sys,
             "argv",
-            ["ccflow-etl", "+callable=callable", f"+context.path={output_path}", "+context.payload.message=hello", "+context.overwrite=true"],
+            ["ccflow-etl", "callable=callable", f"+context.path={output_path}", "+context.payload.message=hello", "+context.overwrite=true"],
         ):
             ret = main()
             assert ret is None

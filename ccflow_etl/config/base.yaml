@@ -2,11 +2,11 @@
 
 defaults:
   - _self_
-  - callable: local_json_write
+  - callable: local_write
   - optional backfill: null
 
 model:
-  _target_: ccflow_etl.LocalJSONWriteModel
+  _target_: ccflow_etl.LocalWriteModel
 
 cli:
   model:

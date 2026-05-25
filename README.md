@@ -16,8 +16,8 @@ The package currently provides:
 - Shared CLI entry points: `cc-etl` and `cc-etl-explain`.
 - Date expansion: `Interval`, `BaseCalendar`, built-in calendars, `BackfillContext`, and `BackfillModel` for fixed, business-day, calendar-boundary, and custom-calendar backfills.
 - Handoff metadata: `ETLArtifact` for typed stage artifacts.
-- Local JSON persistence: `LocalJSONWriteModel`, `LocalJSONCachePutModel`, and `LocalJSONCacheGetModel`.
-- Checkpointing: `SQLiteCheckpointStore` and `CheckpointDecisionModel` for idempotent skip decisions.
+- Format-aware writes and cache handoffs: `LocalWriteModel`, `CachePutModel` / `CacheGetModel`, `PayloadCodec`, and `LocalCacheStore` for JSON, CSV, text, binary, gzip, and pyarrow-backed parquet payloads over byte-oriented stores.
+- Checkpointing: `CheckpointRecord`, checkpoint statuses, and `CheckpointDecisionModel` for idempotent skip decisions; connector-backed stores live in connector packages.
 - Retry orchestration: `RetryPolicy`, `RetryModel`, retry event summaries, timeout categories, and backoff/jitter helpers.
 - Run reporting: `RunSummary` for structured counts by status and artifact stage.
 
@@ -29,9 +29,16 @@ The package currently provides:
 pip install ccflow-etl
 ```
 
+Connector-backed cache and checkpoint stores are installed from the connector packages that own their I/O:
+
+```bash
+pip install ccflow-s3
+pip install ccflow-db
+```
+
 ## CLI Basics
 
-`cc-etl` runs a configured `ccflow` callable model through Hydra. The packaged default config is intentionally tiny: it writes a local JSON payload using `LocalJSONWriteModel`.
+`cc-etl` runs a configured `ccflow` callable model through Hydra. The packaged default config is intentionally tiny: it writes a local JSON payload using `LocalWriteModel(format="json")`.
 
 ```bash
 cc-etl context.path=./example-output.json context.payload.message='hello from ccflow-etl'
@@ -90,7 +97,7 @@ from typing import Type
 from ccflow import CallableModel, ContextBase, ContextType, Flow, GenericResult, ResultType
 from pydantic import Field
 
-from ccflow_etl import ETLArtifact, LocalJSONCachePutContext, LocalJSONCachePutModel, RunSummary
+from ccflow_etl import CachePutContext, CachePutModel, ETLArtifact, LocalCacheStore, RunSummary
 
 
 class TextStatsContext(ContextBase):
@@ -101,7 +108,7 @@ class TextStatsContext(ContextBase):
 
 
 class TextStatsModel(CallableModel):
-    writer: LocalJSONCachePutModel = Field(default_factory=LocalJSONCachePutModel)
+    writer: CachePutModel = Field(default_factory=lambda: CachePutModel(store=LocalCacheStore(), format="json"))
 
     @property
     def context_type(self) -> Type[ContextType]:
@@ -128,7 +135,7 @@ class TextStatsModel(CallableModel):
         }
 
         write_result = self.writer(
-            LocalJSONCachePutContext(
+            CachePutContext(
                 path=output_path,
                 payload=payload,
                 dataset="text_stats",
@@ -269,7 +276,7 @@ Connection and credential scopes should live with the packages that own those co
 
 ## Checkpoints And Skip Decisions
 
-`SQLiteCheckpointStore` records unit status in a local SQLite database. `CheckpointDecisionModel` combines checkpoints and destination existence checks into planned or skipped units. Use it before calling expensive or non-idempotent work.
+`CheckpointDecisionModel` combines checkpoint stores and destination existence checks into planned or skipped units. Use it before calling expensive or non-idempotent work. Stores only need to provide `should_skip(key)`; connector-backed stores such as `ccflow_db.SQLiteCheckpointStore` provide the durable implementation.
 
 Typical unit statuses are:
 
@@ -293,16 +300,34 @@ retrying_model = RetryModel(
 )
 ```
 
-## Local JSON Cache Handoffs
+## Cache Handoffs And Formats
 
-Use `LocalJSONCachePutModel` and `LocalJSONCacheGetModel` when local files are more than raw writes: they return `ETLArtifact` records with stable keys, dataset names, stages, URIs, media types, and statuses.
+Use cache put/get models when persisted payloads need ETL metadata: they return `ETLArtifact` records with stable keys, dataset names, stages, URIs, media types, and statuses. `ccflow-etl` owns the format conversion; stores only need byte-oriented `exists(key)`, `put_bytes(key, payload, content_type=...)`, `get_bytes(key)`, and `uri(key)` methods.
 
 ```python
-from ccflow_etl import LocalJSONCacheGetContext, LocalJSONCacheGetModel
+from ccflow_etl import CacheGetContext, CacheGetModel, LocalCacheStore
 
-result = LocalJSONCacheGetModel()(LocalJSONCacheGetContext(path="./stats.json", dataset="text_stats", stage="load"))
+result = CacheGetModel(store=LocalCacheStore(), format="json")(CacheGetContext(path="./stats.json", dataset="text_stats", stage="load"))
 if result.status == "hit":
     print(result.payload)
+```
+
+`CachePutModel` / `CacheGetModel` accept `format="json"`, `format="csv"`, `format="text"`, `format="binary"`, `format="parquet"`, or a compressed form such as `format=["json", "gzip"]`. The selected `PayloadCodec` determines suffixes and media types, so adding a format does not require new cache model classes.
+
+```python
+from ccflow_s3 import S3CacheStore, S3Client
+from ccflow_etl import CacheGetContext, CacheGetModel
+
+store = S3CacheStore(client=S3Client(), bucket="bucket", prefix="cache")
+result = CacheGetModel(store=store, format="json")(CacheGetContext(key="text_stats/2026-05-01"))
+```
+
+```python
+from ccflow_db import SQLiteCacheStore, SQLiteConfig
+from ccflow_etl import CacheGetContext, CacheGetModel
+
+store = SQLiteCacheStore(config=SQLiteConfig(path="./cache.sqlite"), table="cache_entries")
+result = CacheGetModel(store=store, format="json")(CacheGetContext(key="text_stats/2026-05-01"))
 ```
 
 ## Run Summaries

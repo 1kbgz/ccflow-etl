@@ -1,9 +1,16 @@
-from ccflow_etl import CheckpointDecisionContext, CheckpointDecisionModel, CheckpointDecisionUnit, SQLiteCheckpointStore
+from ccflow_etl import CheckpointDecisionContext, CheckpointDecisionModel, CheckpointDecisionUnit
+
+
+class FakeCheckpointStore:
+    def __init__(self, succeeded_keys):
+        self.succeeded_keys = set(succeeded_keys)
+
+    def should_skip(self, key):
+        return key in self.succeeded_keys
 
 
 def test_checkpoint_decision_model_skips_succeeded_checkpoint_units(tmp_path):
-    store = SQLiteCheckpointStore(path=str(tmp_path / "checkpoints.sqlite"))
-    store.mark_succeeded("massive:daily_bars:AAA:2024-01-03")
+    store = FakeCheckpointStore({"massive:daily_bars:AAA:2024-01-03"})
 
     result = CheckpointDecisionModel()(
         CheckpointDecisionContext(
