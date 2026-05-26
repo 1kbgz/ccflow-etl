@@ -27,6 +27,8 @@ if result.status == "hit":
 
 `CachePutModel` and `CacheGetModel` accept `format="json"`, `format="csv"`, `format="text"`, `format="binary"`, `format="parquet"`, or a compressed form such as `format=["json", "gzip"]`. The selected codec determines suffixes and media types, so adding a format does not require new cache model classes.
 
+The packaged `cache=noop` group registers `NoOpCacheStore` plus JSON cache get/put models. It is the default for the packaged base config, so pipelines can depend on a cache registry without forcing local or durable storage.
+
 Connector packages can expose durable implementations of the byte-store contract:
 
 ```python
@@ -48,6 +50,8 @@ result = CacheGetModel(store=store, format="json")(CacheGetContext(key="text_sta
 ## Checkpoints And Skip Decisions
 
 `CheckpointDecisionModel` combines checkpoint stores and destination existence checks into planned or skipped units. Use it before calling expensive or non-idempotent work. Stores only need to provide `should_skip(key)`; connector packages can provide durable implementations.
+
+The packaged `checkpoint=noop` group registers `NoOpCheckpointStore` and keeps all units runnable. Connector packages can replace it with durable groups such as `checkpoint=s3` or `checkpoint=sqlite`.
 
 Typical unit statuses are:
 

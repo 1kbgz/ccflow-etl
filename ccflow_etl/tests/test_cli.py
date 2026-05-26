@@ -5,7 +5,20 @@ from unittest.mock import patch
 
 from ccflow.utils.hydra import cfg_run, load_config as base_load_config
 
-from ccflow_etl import BackfillModel, DailyCalendar, LocalWriteModel, WeekdayCalendar, load_config
+from ccflow_etl import (
+    APIKeySecretCredentials,
+    APITokenCredentials,
+    BackfillModel,
+    DailyCalendar,
+    LocalWriteModel,
+    NoCredentials,
+    NoOpCacheStore,
+    NoOpCheckpointStore,
+    OAuthCredentials,
+    UsernamePasswordCredentials,
+    WeekdayCalendar,
+    load_config,
+)
 from ccflow_etl.cli import main
 
 
@@ -13,6 +26,34 @@ class TestBasic:
     def test_basic_example(self):
         cfg = load_config([], overwrite=True)
         assert isinstance(cfg["model"], LocalWriteModel)
+
+    def test_base_config_registers_credentials_and_noop_stores(self):
+        cfg = load_config([], overwrite=True)
+
+        assert isinstance(cfg["credentials/none"], NoCredentials)
+        assert isinstance(cfg["credentials/username_password"], UsernamePasswordCredentials)
+        assert isinstance(cfg["credentials/api_token"], APITokenCredentials)
+        assert isinstance(cfg["credentials/api_key_secret"], APIKeySecretCredentials)
+        assert isinstance(cfg["credentials/oauth"], OAuthCredentials)
+        assert isinstance(cfg["cache/store"], NoOpCacheStore)
+        assert isinstance(cfg["checkpoint/store"], NoOpCheckpointStore)
+
+    def test_packaged_backfill_interval_configs_register_default_intervals(self):
+        for name, expected_offset in {
+            "hourly": "h",
+            "first_day_of_month": "MS",
+            "last_day_of_month": "ME",
+        }.items():
+            cfg = load_config(
+                [
+                    "model._target_=ccflow_etl.tests.test_backfill.EchoDateModel",
+                    f"backfill={name}",
+                ],
+                overwrite=True,
+            )
+            assert isinstance(cfg["backfill"], BackfillModel)
+            assert cfg["backfill"].interval.offset == expected_offset
+            assert cfg["backfill"].interval.n == 1
 
     def test_basic_cli(self, tmp_path):
         output_path = tmp_path / "example.json"

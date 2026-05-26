@@ -1,0 +1,7 @@
+# @package checkpoint
+
+store:
+  _target_: ccflow_etl.NoOpCheckpointStore
+
+decision:
+  _target_: ccflow_etl.CheckpointDecisionModel
