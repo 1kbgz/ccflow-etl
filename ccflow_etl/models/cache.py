@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Optional, Type
+from typing import Any, Dict, Optional, Type
 from uuid import uuid4
 
 from ccflow import BaseModel, CallableModel, ContextBase, ContextType, Flow, ResultBase, ResultType
@@ -15,6 +15,7 @@ __all__ = (
     "CachePutModel",
     "CachePutResult",
     "LocalCacheStore",
+    "NoOpCacheStore",
 )
 
 
@@ -218,3 +219,17 @@ class LocalCacheStore(BaseModel):
 
     def get_bytes(self, key: str) -> bytes:
         return Path(key).read_bytes()
+
+
+class NoOpCacheStore(BaseModel):
+    def uri(self, key: str) -> str:
+        return f"noop://cache/{key}"
+
+    def exists(self, key: str) -> bool:
+        return False
+
+    def put_bytes(self, key: str, value: bytes, content_type: Optional[str] = None) -> Dict[str, str]:
+        return {"key": key, "status": "noop"}
+
+    def get_bytes(self, key: str) -> bytes:
+        raise FileNotFoundError(self.uri(key))

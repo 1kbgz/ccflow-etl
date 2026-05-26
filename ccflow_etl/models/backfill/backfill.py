@@ -36,6 +36,7 @@ class BackfillContext(DatetimeRangeContext, Generic[C]):
     direction: Literal["forward", "backward"] = "forward"
     interval: Interval = Field(default_factory=lambda: Interval.model_validate("1D"), description="Interval between each backfill step")
     calendar: Optional[SerializeAsAny[BaseCalendar]] = Field(default=None, description="Calendar that provides backfill steps")
+    calendar_from_default: bool = Field(default=False, exclude=True)
 
     @classmethod
     def _is_calendar_value(cls, value) -> bool:
@@ -98,6 +99,8 @@ class BackfillContext(DatetimeRangeContext, Generic[C]):
             raise ValueError("BackfillContext.context was renamed to BackfillContext.template")
         if v.get("direction") not in (None, "forward", "backward"):
             raise ValueError("direction must be either 'forward' or 'backward'")
+        has_calendar = "calendar" in v and v["calendar"] is not None
+        has_interval = "interval" in v and v["interval"] is not None
         # Validate interval to not confuse ccflow
         if "interval" in v and v["interval"] is not None:
             interval = v["interval"]
@@ -107,6 +110,7 @@ class BackfillContext(DatetimeRangeContext, Generic[C]):
             v["calendar"] = cls._coerce_calendar(v["calendar"])
         if v.get("calendar") is None:
             v["calendar"] = IntervalCalendar(interval=v.get("interval", Interval.model_validate("1D")))
+            v["calendar_from_default"] = not has_calendar and not has_interval
         elif isinstance(v["calendar"], IntervalCalendar):
             v["interval"] = v["calendar"].interval
         return v
@@ -135,6 +139,8 @@ class BackfillResult(GenericResult): ...
 
 class BackfillModel(CallableModel, Generic[C, R]):
     model: CallableModelGenericType[C, R]
+    interval: Optional[Interval] = None
+    calendar: Optional[SerializeAsAny[BaseCalendar]] = None
 
     _steps: List[ContextType] = PrivateAttr(default_factory=list)
 
@@ -151,15 +157,35 @@ class BackfillModel(CallableModel, Generic[C, R]):
     def validate_model(cls, v):
         if not isinstance(v, dict):
             raise ValueError("model must be a dict representing a CallableModelGenericType")
+        v = dict(v)
+        if isinstance(v.get("interval"), str):
+            v["interval"] = Interval.model_validate(v["interval"])
+        if "calendar" in v and v["calendar"] is not None:
+            v["calendar"] = BaseCalendar._coerce_calendar(v["calendar"])
         return v
+
+    def _context_with_defaults(self, context: BackfillContext[C]) -> BackfillContext[C]:
+        if self.calendar is None and self.interval is None:
+            return context
+        if not context.calendar_from_default:
+            return context
+        if self.calendar is not None:
+            updates = {"calendar": self.calendar}
+            if isinstance(self.calendar, IntervalCalendar):
+                updates["interval"] = self.calendar.interval
+            return context.model_copy(update=updates)
+        interval = self.interval or Interval.model_validate("1D")
+        return context.model_copy(update={"interval": interval, "calendar": IntervalCalendar(interval=interval)})
 
     @Flow.deps
     def __deps__(self, context: BackfillContext[C]) -> List[Tuple[CallableModelGenericType[C, R], List[ContextType]]]:
+        context = self._context_with_defaults(context)
         self._steps = context.step_contexts()
         return [(self.model, self._steps)]
 
     @Flow.call
     def __call__(self, context: BackfillContext[C]) -> BackfillResult:
+        context = self._context_with_defaults(context)
         outputs = []
         for step in self._steps or context.step_contexts():
             result = self.model(context=step)

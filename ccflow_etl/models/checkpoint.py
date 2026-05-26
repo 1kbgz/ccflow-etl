@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Type
 
@@ -12,6 +13,7 @@ __all__ = (
     "CheckpointDecisionUnit",
     "CheckpointRecord",
     "CheckpointStatus",
+    "NoOpCheckpointStore",
 )
 
 CheckpointStatus = Literal["planned", "running", "succeeded", "failed", "skipped"]
@@ -22,6 +24,20 @@ class CheckpointRecord(BaseModel):
     status: CheckpointStatus
     updated_at: str
     metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class NoOpCheckpointStore(BaseModel):
+    def get(self, key: str) -> Optional[CheckpointRecord]:
+        return None
+
+    def mark(self, key: str, status: CheckpointStatus, metadata: Optional[Dict[str, Any]] = None) -> CheckpointRecord:
+        return CheckpointRecord(key=key, status=status, updated_at=datetime.now(timezone.utc).isoformat(), metadata=metadata or {})
+
+    def mark_succeeded(self, key: str, metadata: Optional[Dict[str, Any]] = None) -> CheckpointRecord:
+        return self.mark(key=key, status="succeeded", metadata=metadata)
+
+    def should_skip(self, key: str) -> bool:
+        return False
 
 
 CheckpointDecisionStatus = Literal["runnable", "checkpoint", "exists"]

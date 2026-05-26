@@ -93,3 +93,9 @@ def test_backfill_model_returns_step_outputs_for_cli_date_range_list():
             {"context": {"date": "2024-01-03", "type_": "ccflow.context.DateContext"}, "value": {"date": "2024-01-03"}},
         ],
     }
+
+
+def test_backfill_model_default_interval_does_not_override_explicit_context_interval():
+    result = BackfillModel(model=EchoDateModel(), interval="1h")(["2024-01-02", "2024-01-03", {}, "forward", "1D"])
+
+    assert result.value["steps"] == 2

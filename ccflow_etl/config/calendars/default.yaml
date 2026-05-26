@@ -9,6 +9,14 @@ hourly:
 weekly:
   _target_: ccflow_etl.WeeklyCalendar
 
+first_day_of_month:
+  _target_: ccflow_etl.IntervalCalendar
+  interval: 1MS
+
+last_day_of_month:
+  _target_: ccflow_etl.IntervalCalendar
+  interval: 1ME
+
 weekdays:
   _target_: ccflow_etl.WeekdayCalendar
 
