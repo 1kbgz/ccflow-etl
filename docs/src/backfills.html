@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Handoffs, Formats, And Reliability" href="handoffs.html"><link rel="prev" title="Building Pipelines" href="pipelines.html">
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
-        <title>Backfills And Calendars - ccflow-etl v0.1.1</title>
+        <title>Backfills And Calendars - ccflow-etl v0.1.2</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
@@ -167,7 +167,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">ccflow-etl <code style='font-size: var(--font-size--small--4);color: var(--sd-color-primary);'>v0.1.1</code></div></a>
+      <a href="../../index.html"><div class="brand">ccflow-etl <code style='font-size: var(--font-size--small--4);color: var(--sd-color-primary);'>v0.1.2</code></div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -188,7 +188,7 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
   
-  <span class="sidebar-brand-text">ccflow-etl <code style='font-size: var(--font-size--small--4);color: var(--sd-color-primary);'>v0.1.1</code></span>
+  <span class="sidebar-brand-text">ccflow-etl <code style='font-size: var(--font-size--small--4);color: var(--sd-color-primary);'>v0.1.2</code></span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -301,10 +301,11 @@
 <h2>Packaged Backfill Groups<a class="headerlink" href="#packaged-backfill-groups" title="Link to this heading">¶</a></h2>
 <p>Most projects can use the packaged groups instead of creating a separate backfill config for every callable. The root <code class="docutils literal notranslate"><span class="pre">context</span></code> remains the <code class="docutils literal notranslate"><span class="pre">ccflow</span></code> runtime context. For a backfill run, it is a <code class="docutils literal notranslate"><span class="pre">BackfillContext</span></code>; the wrapped callable’s seed context is nested under <code class="docutils literal notranslate"><span class="pre">context.template</span></code>, or passed as the third item in compact list form.</p>
 <p>The packaged backfill groups do not create a separate <code class="docutils literal notranslate"><span class="pre">backfill.context</span></code> shadow namespace.</p>
-<p>Built-in calendars are available under <code class="docutils literal notranslate"><span class="pre">/calendars</span></code>: <code class="docutils literal notranslate"><span class="pre">daily</span></code>, <code class="docutils literal notranslate"><span class="pre">hourly</span></code>, <code class="docutils literal notranslate"><span class="pre">weekly</span></code>, <code class="docutils literal notranslate"><span class="pre">weekdays</span></code>, <code class="docutils literal notranslate"><span class="pre">business_daily</span></code>, and <code class="docutils literal notranslate"><span class="pre">monday_friday</span></code>. Set <code class="docutils literal notranslate"><span class="pre">context.calendar</span></code> to one of those paths when you want the calendar object to choose steps instead of the interval shorthand:</p>
+<p>Built-in calendars are available under <code class="docutils literal notranslate"><span class="pre">/calendars</span></code>: <code class="docutils literal notranslate"><span class="pre">daily</span></code>, <code class="docutils literal notranslate"><span class="pre">hourly</span></code>, <code class="docutils literal notranslate"><span class="pre">weekly</span></code>, <code class="docutils literal notranslate"><span class="pre">first_day_of_month</span></code>, <code class="docutils literal notranslate"><span class="pre">last_day_of_month</span></code>, <code class="docutils literal notranslate"><span class="pre">weekdays</span></code>, <code class="docutils literal notranslate"><span class="pre">business_daily</span></code>, and <code class="docutils literal notranslate"><span class="pre">monday_friday</span></code>. Set <code class="docutils literal notranslate"><span class="pre">context.calendar</span></code> to one of those paths when you want the calendar object to choose steps instead of the interval shorthand:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cc-etl<span class="w"> </span>--config-path<span class="w"> </span>./config<span class="w"> </span>--config-name<span class="w"> </span>text_stats_runner<span class="w"> </span><span class="nv">backfill</span><span class="o">=</span>daily<span class="w"> </span>+context.start_datetime<span class="o">=</span><span class="m">2026</span>-05-01<span class="w"> </span>+context.end_datetime<span class="o">=</span><span class="m">2026</span>-05-15<span class="w"> </span>+context.calendar<span class="o">=</span>/calendars/weekdays<span class="w"> </span>+context.template.input_path<span class="o">=</span>./notes.txt<span class="w"> </span>+context.template.output_path<span class="o">=</span>./stats.json<span class="w"> </span>+context.template.min_length<span class="o">=</span><span class="m">1</span>
 </pre></div>
 </div>
+<p>Named packaged backfill groups can also choose the default interval without creating a root <code class="docutils literal notranslate"><span class="pre">context</span></code> namespace in config. Use <code class="docutils literal notranslate"><span class="pre">backfill=hourly</span></code>, <code class="docutils literal notranslate"><span class="pre">backfill=first_day_of_month</span></code>, or <code class="docutils literal notranslate"><span class="pre">backfill=last_day_of_month</span></code> when the config group should supply the interval and runtime context should supply only the range and wrapped callable template.</p>
 </section>
 <section id="supported-intervals">
 <h2>Supported Intervals<a class="headerlink" href="#supported-intervals" title="Link to this heading">¶</a></h2>
@@ -384,7 +385,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=a58bc63e"></script>
+</div><script src="../../_static/documentation_options.js?v=92734c54"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>

@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Building Pipelines" href="pipelines.html"><link rel="prev" title="ccflow-etl" href="../../index.html">
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
-        <title>CLI And Config - ccflow-etl v0.1.1</title>
+        <title>CLI And Config - ccflow-etl v0.1.2</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
@@ -167,7 +167,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">ccflow-etl <code style='font-size: var(--font-size--small--4);color: var(--sd-color-primary);'>v0.1.1</code></div></a>
+      <a href="../../index.html"><div class="brand">ccflow-etl <code style='font-size: var(--font-size--small--4);color: var(--sd-color-primary);'>v0.1.2</code></div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -188,7 +188,7 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
   
-  <span class="sidebar-brand-text">ccflow-etl <code style='font-size: var(--font-size--small--4);color: var(--sd-color-primary);'>v0.1.1</code></span>
+  <span class="sidebar-brand-text">ccflow-etl <code style='font-size: var(--font-size--small--4);color: var(--sd-color-primary);'>v0.1.2</code></span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -291,6 +291,9 @@ cc-etl-explain<span class="w"> </span>+context.path<span class="o">=</span>./exa
 <li><p><code class="docutils literal notranslate"><span class="pre">callable/callable</span></code>: run <code class="docutils literal notranslate"><span class="pre">/model</span></code> directly.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">backfill/*</span></code>: wrap <code class="docutils literal notranslate"><span class="pre">/model</span></code> in <code class="docutils literal notranslate"><span class="pre">BackfillModel</span></code>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">calendars/*</span></code>: register reusable calendar objects for backfilling.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">credentials/default</span></code>: register generic credential shapes for packages to extend.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cache/noop</span></code>: register a no-op cache store plus matching get/put models.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">checkpoint/noop</span></code>: register a no-op checkpoint store plus checkpoint decision model.</p></li>
 </ul>
 <p>To use those groups from a project config, add the package config directory to the Hydra search path:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># config/text_stats_runner.yaml</span>
@@ -326,6 +329,7 @@ cc-etl-explain<span class="w"> </span>+context.path<span class="o">=</span>./exa
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cc-etl<span class="w"> </span>--config-path<span class="w"> </span>./config<span class="w"> </span>--config-name<span class="w"> </span>text_stats_runner<span class="w"> </span><span class="nv">backfill</span><span class="o">=</span>daily<span class="w"> </span>+context.start_datetime<span class="o">=</span><span class="m">2026</span>-05-01<span class="w"> </span>+context.end_datetime<span class="o">=</span><span class="m">2026</span>-05-03<span class="w"> </span>+context.interval<span class="o">=</span>daily<span class="w"> </span>+context.template.input_path<span class="o">=</span>./notes.txt<span class="w"> </span>+context.template.output_path<span class="o">=</span>./stats.json<span class="w"> </span>+context.template.min_length<span class="o">=</span><span class="m">1</span>
 </pre></div>
 </div>
+<p>Connector packages can add their own package config directories through Hydra lerna plugins. For example, <code class="docutils literal notranslate"><span class="pre">ccflow-s3</span></code> contributes <code class="docutils literal notranslate"><span class="pre">cache=s3</span></code> and <code class="docutils literal notranslate"><span class="pre">checkpoint=s3</span></code>; <code class="docutils literal notranslate"><span class="pre">ccflow-db</span></code> contributes <code class="docutils literal notranslate"><span class="pre">cache=sqlite</span></code> and <code class="docutils literal notranslate"><span class="pre">checkpoint=sqlite</span></code>. The packaged <code class="docutils literal notranslate"><span class="pre">ccflow-etl</span></code> base defaults remain no-op, so local runners can opt into durable stores by changing only config groups.</p>
 <p>For static runner configs that set root <code class="docutils literal notranslate"><span class="pre">context</span></code> values in the file, compose the packaged group before <code class="docutils literal notranslate"><span class="pre">_self_</span></code> so local runtime values override group defaults:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">defaults</span><span class="p">:</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">/backfill</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">daily</span>
@@ -404,7 +408,7 @@ cc-etl-explain<span class="w"> </span>+context.path<span class="o">=</span>./exa
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=a58bc63e"></script>
+</div><script src="../../_static/documentation_options.js?v=92734c54"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>

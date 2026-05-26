@@ -54,6 +54,9 @@ context:
 - `callable/callable`: run `/model` directly.
 - `backfill/*`: wrap `/model` in `BackfillModel`.
 - `calendars/*`: register reusable calendar objects for backfilling.
+- `credentials/default`: register generic credential shapes for packages to extend.
+- `cache/noop`: register a no-op cache store plus matching get/put models.
+- `checkpoint/noop`: register a no-op checkpoint store plus checkpoint decision model.
 
 To use those groups from a project config, add the package config directory to the Hydra search path:
 
@@ -94,6 +97,8 @@ Run the same model as a backfill:
 ```bash
 cc-etl --config-path ./config --config-name text_stats_runner backfill=daily +context.start_datetime=2026-05-01 +context.end_datetime=2026-05-03 +context.interval=daily +context.template.input_path=./notes.txt +context.template.output_path=./stats.json +context.template.min_length=1
 ```
+
+Connector packages can add their own package config directories through Hydra lerna plugins. For example, `ccflow-s3` contributes `cache=s3` and `checkpoint=s3`; `ccflow-db` contributes `cache=sqlite` and `checkpoint=sqlite`. The packaged `ccflow-etl` base defaults remain no-op, so local runners can opt into durable stores by changing only config groups.
 
 For static runner configs that set root `context` values in the file, compose the packaged group before `_self_` so local runtime values override group defaults:
 

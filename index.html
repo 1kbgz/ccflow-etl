@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="CLI And Config" href="docs/src/cli.html">
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
-        <title>ccflow-etl v0.1.1</title>
+        <title>ccflow-etl v0.1.2</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
@@ -167,7 +167,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="#"><div class="brand">ccflow-etl <code style='font-size: var(--font-size--small--4);color: var(--sd-color-primary);'>v0.1.1</code></div></a>
+      <a href="#"><div class="brand">ccflow-etl <code style='font-size: var(--font-size--small--4);color: var(--sd-color-primary);'>v0.1.2</code></div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -188,7 +188,7 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="#">
   
-  <span class="sidebar-brand-text">ccflow-etl <code style='font-size: var(--font-size--small--4);color: var(--sd-color-primary);'>v0.1.1</code></span>
+  <span class="sidebar-brand-text">ccflow-etl <code style='font-size: var(--font-size--small--4);color: var(--sd-color-primary);'>v0.1.2</code></span>
   
 </a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -303,9 +303,10 @@ cc-etl-explain<span class="w"> </span>+context.path<span class="o">=</span>./exa
 <ul class="simple">
 <li><p>Shared CLI entry points: <code class="docutils literal notranslate"><span class="pre">cc-etl</span></code> and <code class="docutils literal notranslate"><span class="pre">cc-etl-explain</span></code>.</p></li>
 <li><p>Date expansion: <code class="docutils literal notranslate"><span class="pre">Interval</span></code>, <code class="docutils literal notranslate"><span class="pre">BaseCalendar</span></code>, built-in calendars, <code class="docutils literal notranslate"><span class="pre">BackfillContext</span></code>, and <code class="docutils literal notranslate"><span class="pre">BackfillModel</span></code>.</p></li>
+<li><p>Generic credential models and a <code class="docutils literal notranslate"><span class="pre">/credentials</span></code> Hydra registry for package extension.</p></li>
 <li><p>Handoff metadata: <code class="docutils literal notranslate"><span class="pre">ETLArtifact</span></code> for typed stage artifacts.</p></li>
-<li><p>Format-aware writes and cache handoffs: <code class="docutils literal notranslate"><span class="pre">LocalWriteModel</span></code>, <code class="docutils literal notranslate"><span class="pre">CachePutModel</span></code>, <code class="docutils literal notranslate"><span class="pre">CacheGetModel</span></code>, <code class="docutils literal notranslate"><span class="pre">PayloadCodec</span></code>, and <code class="docutils literal notranslate"><span class="pre">LocalCacheStore</span></code>.</p></li>
-<li><p>Checkpointing: <code class="docutils literal notranslate"><span class="pre">CheckpointRecord</span></code>, checkpoint statuses, and <code class="docutils literal notranslate"><span class="pre">CheckpointDecisionModel</span></code> for idempotent skip decisions.</p></li>
+<li><p>Format-aware writes and cache handoffs: <code class="docutils literal notranslate"><span class="pre">LocalWriteModel</span></code>, <code class="docutils literal notranslate"><span class="pre">CachePutModel</span></code>, <code class="docutils literal notranslate"><span class="pre">CacheGetModel</span></code>, <code class="docutils literal notranslate"><span class="pre">PayloadCodec</span></code>, <code class="docutils literal notranslate"><span class="pre">LocalCacheStore</span></code>, and no-op cache defaults.</p></li>
+<li><p>Checkpointing: <code class="docutils literal notranslate"><span class="pre">CheckpointRecord</span></code>, checkpoint statuses, <code class="docutils literal notranslate"><span class="pre">CheckpointDecisionModel</span></code> for idempotent skip decisions, and no-op checkpoint defaults.</p></li>
 <li><p>Retry orchestration: <code class="docutils literal notranslate"><span class="pre">RetryPolicy</span></code>, <code class="docutils literal notranslate"><span class="pre">RetryModel</span></code>, retry event summaries, timeout categories, and backoff/jitter helpers.</p></li>
 <li><p>Run reporting: <code class="docutils literal notranslate"><span class="pre">RunSummary</span></code> for structured counts by status and artifact stage.</p></li>
 </ul>
@@ -323,7 +324,7 @@ cc-etl-explain<span class="w"> </span>+context.path<span class="o">=</span>./exa
 </section>
 <section id="package-boundaries">
 <h2>Package Boundaries<a class="headerlink" href="#package-boundaries" title="Link to this heading">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">ccflow-etl</span></code> owns domain-neutral ETL contracts and helpers. It does not own application workflows, provider clients, connector clients, credentials, or domain-specific rules. Durable store implementations should live in connector packages and integrate through the generic cache and checkpoint contracts.</p>
+<p><code class="docutils literal notranslate"><span class="pre">ccflow-etl</span></code> owns domain-neutral ETL contracts, generic credential shapes, and helpers. It does not own application workflows, provider clients, connector clients, provider-specific credential semantics, or domain-specific rules. Durable store implementations should live in connector packages and integrate through the generic cache and checkpoint contracts.</p>
 </section>
 </section>
 
@@ -366,7 +367,7 @@ cc-etl-explain<span class="w"> </span>+context.path<span class="o">=</span>./exa
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=a58bc63e"></script>
+</div><script src="_static/documentation_options.js?v=92734c54"></script>
     <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

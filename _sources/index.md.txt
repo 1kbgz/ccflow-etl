@@ -67,9 +67,10 @@ cc-etl --config-path ./config --config-name text_stats +context.input_path=./not
 
 - Shared CLI entry points: `cc-etl` and `cc-etl-explain`.
 - Date expansion: `Interval`, `BaseCalendar`, built-in calendars, `BackfillContext`, and `BackfillModel`.
+- Generic credential models and a `/credentials` Hydra registry for package extension.
 - Handoff metadata: `ETLArtifact` for typed stage artifacts.
-- Format-aware writes and cache handoffs: `LocalWriteModel`, `CachePutModel`, `CacheGetModel`, `PayloadCodec`, and `LocalCacheStore`.
-- Checkpointing: `CheckpointRecord`, checkpoint statuses, and `CheckpointDecisionModel` for idempotent skip decisions.
+- Format-aware writes and cache handoffs: `LocalWriteModel`, `CachePutModel`, `CacheGetModel`, `PayloadCodec`, `LocalCacheStore`, and no-op cache defaults.
+- Checkpointing: `CheckpointRecord`, checkpoint statuses, `CheckpointDecisionModel` for idempotent skip decisions, and no-op checkpoint defaults.
 - Retry orchestration: `RetryPolicy`, `RetryModel`, retry event summaries, timeout categories, and backoff/jitter helpers.
 - Run reporting: `RunSummary` for structured counts by status and artifact stage.
 
@@ -84,4 +85,4 @@ cc-etl --config-path ./config --config-name text_stats +context.input_path=./not
 
 ## Package Boundaries
 
-`ccflow-etl` owns domain-neutral ETL contracts and helpers. It does not own application workflows, provider clients, connector clients, credentials, or domain-specific rules. Durable store implementations should live in connector packages and integrate through the generic cache and checkpoint contracts.
+`ccflow-etl` owns domain-neutral ETL contracts, generic credential shapes, and helpers. It does not own application workflows, provider clients, connector clients, provider-specific credential semantics, or domain-specific rules. Durable store implementations should live in connector packages and integrate through the generic cache and checkpoint contracts.
