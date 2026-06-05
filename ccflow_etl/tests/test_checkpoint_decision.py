@@ -10,29 +10,29 @@ class FakeCheckpointStore:
 
 
 def test_checkpoint_decision_model_skips_succeeded_checkpoint_units(tmp_path):
-    store = FakeCheckpointStore({"massive:daily_bars:AAA:2024-01-03"})
+    store = FakeCheckpointStore({"example_provider:sample_records:item-001:2024-01-03"})
 
     result = CheckpointDecisionModel()(
         CheckpointDecisionContext(
             units=[
-                CheckpointDecisionUnit(key="massive:daily_bars:AAA:2024-01-03"),
-                CheckpointDecisionUnit(key="massive:daily_bars:AAA:2024-01-04"),
+                CheckpointDecisionUnit(key="example_provider:sample_records:item-001:2024-01-03"),
+                CheckpointDecisionUnit(key="example_provider:sample_records:item-001:2024-01-04"),
             ],
             checkpoint_store=store,
         )
     )
 
     assert [decision.status for decision in result.decisions] == ["checkpoint", "runnable"]
-    assert result.runnable_keys == ["massive:daily_bars:AAA:2024-01-04"]
+    assert result.runnable_keys == ["example_provider:sample_records:item-001:2024-01-04"]
 
 
 def test_checkpoint_decision_model_skips_existing_destinations_without_overwrite(tmp_path):
-    output_path = tmp_path / "daily_bars" / "AAA" / "2024-01-03.json"
+    output_path = tmp_path / "sample_records" / "item-001" / "2024-01-03.json"
     output_path.parent.mkdir(parents=True)
     output_path.write_text("{}\n")
 
     result = CheckpointDecisionModel()(
-        CheckpointDecisionContext(units=[CheckpointDecisionUnit(key="massive:daily_bars:AAA:2024-01-03", output_path=output_path)])
+        CheckpointDecisionContext(units=[CheckpointDecisionUnit(key="example_provider:sample_records:item-001:2024-01-03", output_path=output_path)])
     )
 
     assert result.decisions[0].status == "exists"
@@ -40,16 +40,16 @@ def test_checkpoint_decision_model_skips_existing_destinations_without_overwrite
 
 
 def test_checkpoint_decision_model_overwrite_keeps_existing_destinations_runnable(tmp_path):
-    output_path = tmp_path / "daily_bars" / "AAA" / "2024-01-03.json"
+    output_path = tmp_path / "sample_records" / "item-001" / "2024-01-03.json"
     output_path.parent.mkdir(parents=True)
     output_path.write_text("{}\n")
 
     result = CheckpointDecisionModel()(
         CheckpointDecisionContext(
-            units=[CheckpointDecisionUnit(key="massive:daily_bars:AAA:2024-01-03", output_path=output_path)],
+            units=[CheckpointDecisionUnit(key="example_provider:sample_records:item-001:2024-01-03", output_path=output_path)],
             overwrite=True,
         )
     )
 
     assert result.decisions[0].status == "runnable"
-    assert result.runnable_keys == ["massive:daily_bars:AAA:2024-01-03"]
+    assert result.runnable_keys == ["example_provider:sample_records:item-001:2024-01-03"]

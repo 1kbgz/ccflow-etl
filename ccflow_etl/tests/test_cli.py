@@ -10,12 +10,14 @@ from ccflow_etl import (
     APITokenCredentials,
     BackfillModel,
     DailyCalendar,
+    DatasetDefinition,
     ExecutionPolicy,
     LocalWriteModel,
     NoCredentials,
     NoOpCacheStore,
     NoOpCheckpointStore,
     OAuthCredentials,
+    ProviderDefinition,
     UsernamePasswordCredentials,
     WeekdayCalendar,
     load_config,
@@ -36,6 +38,8 @@ class TestBasic:
         assert isinstance(cfg["credentials/api_token"], APITokenCredentials)
         assert isinstance(cfg["credentials/api_key_secret"], APIKeySecretCredentials)
         assert isinstance(cfg["credentials/oauth"], OAuthCredentials)
+        assert isinstance(cfg["datasets/generic"], DatasetDefinition)
+        assert isinstance(cfg["providers/generic"], ProviderDefinition)
         assert isinstance(cfg["execution"], ExecutionPolicy)
         assert isinstance(cfg["cache/store"], NoOpCacheStore)
         assert isinstance(cfg["checkpoint/store"], NoOpCheckpointStore)
