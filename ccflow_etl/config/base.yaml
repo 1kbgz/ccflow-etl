@@ -3,6 +3,7 @@
 defaults:
   - _self_
   - credentials: default
+  - execution: default
   - cache: noop
   - checkpoint: noop
   - callable: local_write
