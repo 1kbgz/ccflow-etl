@@ -64,14 +64,17 @@ Typical unit statuses are:
 
 ## Retries
 
-Use `RetryPolicy` and `RetryModel` around callables that may fail transiently. Policies classify retryable status codes, timeout exceptions, and other exception types, then produce event summaries with attempt counts and backoff decisions.
+Use `ccflow` retry wrappers around callables that may fail transiently. `RetryModel` makes retry behavior part of the graph, while `RetryEvaluator` applies retry behavior through evaluator configuration. Connector packages own protocol-specific classification such as HTTP status codes.
 
 ```python
-from ccflow_etl import RetryModel, RetryPolicy
+from ccflow.models import RetryModel
 
 retrying_model = RetryModel(
     model=my_callable,
-    policy=RetryPolicy(max_attempts=3, initial_delay_seconds=0.5, backoff_multiplier=2.0, jitter_ratio=0.1),
+    max_attempts=3,
+    wait_initial=0.5,
+    wait_multiplier=2.0,
+    wait_jitter=0.1,
 )
 ```
 

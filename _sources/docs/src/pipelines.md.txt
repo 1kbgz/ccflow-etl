@@ -1,6 +1,6 @@
 # Building Pipelines
 
-The recommended pattern is to write a concrete `CallableModel` for the workflow you need. The model name, context, output shape, and dependencies should describe the actual workflow. `ccflow-etl` supplies reusable pieces such as writers, artifact metadata, cache handoffs, retry policies, and summaries.
+The recommended pattern is to write a concrete `CallableModel` for the workflow you need. The model name, context, output shape, and dependencies should describe the actual workflow. `ccflow-etl` supplies reusable pieces such as writers, artifact metadata, cache handoffs, execution policy, and summaries. Generic retry wrappers come from `ccflow`.
 
 This example reads a text file, computes word counts, writes JSON locally, and returns artifact metadata plus a run summary.
 
