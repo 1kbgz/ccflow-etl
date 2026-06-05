@@ -47,7 +47,8 @@ cc-etl --config-path ./config --config-name text_stats +context.input_path=./not
 - Handoff metadata: `ETLArtifact` for typed stage artifacts.
 - Format-aware writes and cache handoffs: `LocalWriteModel`, `CachePutModel`, `CacheGetModel`, `PayloadCodec`, `LocalCacheStore`, and no-op cache defaults.
 - Checkpointing: `CheckpointRecord`, checkpoint statuses, `CheckpointDecisionModel` for idempotent skip decisions, and no-op checkpoint defaults.
-- Retry orchestration: `RetryPolicy`, `RetryModel`, retry event summaries, timeout categories, and backoff/jitter helpers.
+- Retry integration: compatibility exports for `ccflow` `RetryPolicy` and `RetryModel`; use `ccflow.evaluators.RetryEvaluator` for runtime evaluator retries.
+- Execution policy: `ExecutionPolicy` for shared max-concurrency hints and rate spacing that evaluators and connector models can consume through the `/execution` Hydra group.
 - Run reporting: `RunSummary` for structured counts by status and artifact stage.
 
 ## Documentation

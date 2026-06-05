@@ -1,0 +1,7 @@
+# @package execution
+
+_target_: ccflow_etl.ExecutionPolicy
+max_concurrency: null
+requests_per_interval: null
+interval_seconds: 1.0
+min_interval_seconds: 0.0
