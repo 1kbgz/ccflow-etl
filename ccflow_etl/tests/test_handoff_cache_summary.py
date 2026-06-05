@@ -4,29 +4,29 @@ from ccflow_etl import CacheGetContext, CacheGetModel, CachePutContext, CachePut
 
 
 def test_local_cache_put_and_get_exposes_typed_artifacts(tmp_path):
-    cache_path = tmp_path / "massive" / "stocks" / "raw" / "2024-01-03" / "AAA.json"
+    cache_path = tmp_path / "example_provider" / "sample_records" / "raw" / "2024-01-03" / "item-001.json"
     store = LocalCacheStore()
 
     put_result = CachePutModel(store=store, format="json")(
-        CachePutContext(path=cache_path, payload={"ticker": "AAA"}, dataset="stocks", stage="extract")
+        CachePutContext(path=cache_path, payload={"item_id": "item-001"}, dataset="sample_records", stage="extract")
     )
 
     assert put_result.status == "written"
     assert put_result.artifact == ETLArtifact(
         key=str(cache_path),
-        dataset="stocks",
+        dataset="sample_records",
         stage="extract",
         uri=str(cache_path),
         media_type="application/json",
         status="written",
     )
 
-    get_result = CacheGetModel(store=store, format="json")(CacheGetContext(path=cache_path, dataset="stocks", stage="extract"))
+    get_result = CacheGetModel(store=store, format="json")(CacheGetContext(path=cache_path, dataset="sample_records", stage="extract"))
 
     assert get_result.status == "hit"
-    assert get_result.payload == {"ticker": "AAA"}
+    assert get_result.payload == {"item_id": "item-001"}
     assert get_result.artifact.status == "hit"
-    assert json.loads(cache_path.read_text()) == {"ticker": "AAA"}
+    assert json.loads(cache_path.read_text()) == {"item_id": "item-001"}
 
 
 def test_run_summary_counts_statuses_and_handoff_stages():

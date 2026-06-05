@@ -44,11 +44,13 @@ cc-etl --config-path ./config --config-name text_stats +context.input_path=./not
 - Shared CLI entry points: `cc-etl` and `cc-etl-explain`.
 - Date expansion: `Interval`, `BaseCalendar`, built-in calendars, `BackfillContext`, and `BackfillModel`.
 - Generic credential models and a `/credentials` Hydra registry for package extension.
+- Generic dataset and provider definition models with `/datasets` and `/providers` Hydra registries for package extension.
 - Handoff metadata: `ETLArtifact` for typed stage artifacts.
 - Format-aware writes and cache handoffs: `LocalWriteModel`, `CachePutModel`, `CacheGetModel`, `PayloadCodec`, `LocalCacheStore`, and no-op cache defaults.
 - Checkpointing: `CheckpointRecord`, checkpoint statuses, `CheckpointDecisionModel` for idempotent skip decisions, and no-op checkpoint defaults.
 - Retry integration: compatibility exports for `ccflow` `RetryPolicy` and `RetryModel`; use `ccflow.evaluators.RetryEvaluator` for runtime evaluator retries.
 - Execution policy: `ExecutionPolicy` for shared max-concurrency hints and rate spacing that evaluators and connector models can consume through the `/execution` Hydra group.
+- Unit identity: `ETLUnitIdentity` for stable provider/dataset/partition/transform/destination keys.
 - Run reporting: `RunSummary` for structured counts by status and artifact stage.
 
 ## Documentation

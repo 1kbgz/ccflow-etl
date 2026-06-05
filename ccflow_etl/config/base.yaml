@@ -3,6 +3,8 @@
 defaults:
   - _self_
   - credentials: default
+  - datasets: default
+  - providers: default
   - execution: default
   - cache: noop
   - checkpoint: noop
