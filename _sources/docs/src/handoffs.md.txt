@@ -62,6 +62,33 @@ Typical unit statuses are:
 - `written` or `upserted`: completed successfully.
 - `failed`, `retried`, or `cancelled`: execution did not finish cleanly.
 
+## Datasets, Providers, And Unit Identity
+
+`DatasetDefinition` describes what a data product is: semantic name, schema, partition keys, cadence, media types, expectations, and destination hints. `ProviderDefinition` describes how data can be obtained: provider type, credential reference, supported dataset references, capabilities, rate limits, retry metadata, and request templates.
+
+```python
+from ccflow_etl import DatasetDefinition, ProviderDefinition
+
+dataset = DatasetDefinition(name="sample_records", partition_keys=["date", "item_id"], schema_name="sample_record", schema_version="1")
+provider = ProviderDefinition(name="example_provider", provider_type="http", dataset_refs=["/datasets/sample_records"])
+```
+
+`ETLUnitIdentity` gives cache, checkpoint, manifest, and destination code a stable key for one provider/dataset/partition/destination unit.
+
+```python
+from ccflow_etl import ETLUnitIdentity
+
+identity = ETLUnitIdentity(
+    provider="example_provider",
+    dataset="sample_records",
+    partition={"date": "2025-01-02", "item_id": "item-001"},
+    schema_version="1",
+    transform_version="raw",
+    destination="object_store",
+)
+checkpoint_key = identity.key(prefix="checkpoint")
+```
+
 ## Retries
 
 Use `ccflow` retry wrappers around callables that may fail transiently. `RetryModel` makes retry behavior part of the graph, while `RetryEvaluator` applies retry behavior through evaluator configuration. Connector packages own protocol-specific classification such as HTTP status codes.

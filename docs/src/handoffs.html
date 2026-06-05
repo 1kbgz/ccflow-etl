@@ -296,6 +296,30 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">failed</span></code>, <code class="docutils literal notranslate"><span class="pre">retried</span></code>, or <code class="docutils literal notranslate"><span class="pre">cancelled</span></code>: execution did not finish cleanly.</p></li>
 </ul>
 </section>
+<section id="datasets-providers-and-unit-identity">
+<h2>Datasets, Providers, And Unit Identity<a class="headerlink" href="#datasets-providers-and-unit-identity" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">DatasetDefinition</span></code> describes what a data product is: semantic name, schema, partition keys, cadence, media types, expectations, and destination hints. <code class="docutils literal notranslate"><span class="pre">ProviderDefinition</span></code> describes how data can be obtained: provider type, credential reference, supported dataset references, capabilities, rate limits, retry metadata, and request templates.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ccflow_etl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DatasetDefinition</span><span class="p">,</span> <span class="n">ProviderDefinition</span>
+
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">DatasetDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;sample_records&quot;</span><span class="p">,</span> <span class="n">partition_keys</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="s2">&quot;item_id&quot;</span><span class="p">],</span> <span class="n">schema_name</span><span class="o">=</span><span class="s2">&quot;sample_record&quot;</span><span class="p">,</span> <span class="n">schema_version</span><span class="o">=</span><span class="s2">&quot;1&quot;</span><span class="p">)</span>
+<span class="n">provider</span> <span class="o">=</span> <span class="n">ProviderDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;example_provider&quot;</span><span class="p">,</span> <span class="n">provider_type</span><span class="o">=</span><span class="s2">&quot;http&quot;</span><span class="p">,</span> <span class="n">dataset_refs</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;/datasets/sample_records&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">ETLUnitIdentity</span></code> gives cache, checkpoint, manifest, and destination code a stable key for one provider/dataset/partition/destination unit.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ccflow_etl</span><span class="w"> </span><span class="kn">import</span> <span class="n">ETLUnitIdentity</span>
+
+<span class="n">identity</span> <span class="o">=</span> <span class="n">ETLUnitIdentity</span><span class="p">(</span>
+    <span class="n">provider</span><span class="o">=</span><span class="s2">&quot;example_provider&quot;</span><span class="p">,</span>
+    <span class="n">dataset</span><span class="o">=</span><span class="s2">&quot;sample_records&quot;</span><span class="p">,</span>
+    <span class="n">partition</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;date&quot;</span><span class="p">:</span> <span class="s2">&quot;2025-01-02&quot;</span><span class="p">,</span> <span class="s2">&quot;item_id&quot;</span><span class="p">:</span> <span class="s2">&quot;item-001&quot;</span><span class="p">},</span>
+    <span class="n">schema_version</span><span class="o">=</span><span class="s2">&quot;1&quot;</span><span class="p">,</span>
+    <span class="n">transform_version</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span>
+    <span class="n">destination</span><span class="o">=</span><span class="s2">&quot;object_store&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">checkpoint_key</span> <span class="o">=</span> <span class="n">identity</span><span class="o">.</span><span class="n">key</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;checkpoint&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
 <section id="retries">
 <h2>Retries<a class="headerlink" href="#retries" title="Link to this heading">¶</a></h2>
 <p>Use <code class="docutils literal notranslate"><span class="pre">ccflow</span></code> retry wrappers around callables that may fail transiently. <code class="docutils literal notranslate"><span class="pre">RetryModel</span></code> makes retry behavior part of the graph, while <code class="docutils literal notranslate"><span class="pre">RetryEvaluator</span></code> applies retry behavior through evaluator configuration. Connector packages own protocol-specific classification such as HTTP status codes.</p>
@@ -385,6 +409,7 @@
 <li><a class="reference internal" href="#">Handoffs, Formats, And Reliability</a><ul>
 <li><a class="reference internal" href="#cache-handoffs-and-formats">Cache Handoffs And Formats</a></li>
 <li><a class="reference internal" href="#checkpoints-and-skip-decisions">Checkpoints And Skip Decisions</a></li>
+<li><a class="reference internal" href="#datasets-providers-and-unit-identity">Datasets, Providers, And Unit Identity</a></li>
 <li><a class="reference internal" href="#retries">Retries</a></li>
 <li><a class="reference internal" href="#run-summaries">Run Summaries</a></li>
 </ul>
