@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="CLI And Config" href="docs/src/cli.html">
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
-        <title>ccflow-etl v0.2.0</title>
+        <title>ccflow-etl v0.3.0</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
@@ -167,7 +167,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="#"><div class="brand">ccflow-etl <code style='font-size: var(--font-size--small--4);color: var(--sd-color-primary);'>v0.2.0</code></div></a>
+      <a href="#"><div class="brand">ccflow-etl <code style='font-size: var(--font-size--small--4);color: var(--sd-color-primary);'>v0.3.0</code></div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -188,7 +188,7 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="#">
   
-  <span class="sidebar-brand-text">ccflow-etl <code style='font-size: var(--font-size--small--4);color: var(--sd-color-primary);'>v0.2.0</code></span>
+  <span class="sidebar-brand-text">ccflow-etl <code style='font-size: var(--font-size--small--4);color: var(--sd-color-primary);'>v0.3.0</code></span>
   
 </a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -256,7 +256,7 @@
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>ccflow-etl
 </pre></div>
 </div>
-<p>Connector-backed cache and checkpoint stores are provided by connector packages that own their I/O:</p>
+<p>Connector-backed cache and artifact stores are provided by connector packages that own their I/O. Generic checkpointing belongs in <code class="docutils literal notranslate"><span class="pre">ccflow</span></code> proper.</p>
 <div class="table-wrapper colwidths-auto docutils container">
 <table class="docutils align-default">
 <thead>
@@ -267,12 +267,12 @@
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ccflow-s3</span></code></p></td>
-<td><p>generic, cache</p></td>
-<td><p>S3-backed cache and checkpoint store</p></td>
+<td><p>generic, storage</p></td>
+<td><p>S3-backed artifact IO and cache</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ccflow-db</span></code></p></td>
 <td><p>generic, cache</p></td>
-<td><p>database-backed cache and checkpoint store</p></td>
+<td><p>database-backed cache store</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ccflow-email</span></code></p></td>
 <td><p>generic, publisher</p></td>
@@ -304,13 +304,13 @@ cc-etl-explain<span class="w"> </span>+context.path<span class="o">=</span>./exa
 <li><p>Shared CLI entry points: <code class="docutils literal notranslate"><span class="pre">cc-etl</span></code> and <code class="docutils literal notranslate"><span class="pre">cc-etl-explain</span></code>.</p></li>
 <li><p>Date expansion: <code class="docutils literal notranslate"><span class="pre">Interval</span></code>, <code class="docutils literal notranslate"><span class="pre">BaseCalendar</span></code>, built-in calendars, <code class="docutils literal notranslate"><span class="pre">BackfillContext</span></code>, and <code class="docutils literal notranslate"><span class="pre">BackfillModel</span></code>.</p></li>
 <li><p>Generic credential models and a <code class="docutils literal notranslate"><span class="pre">/credentials</span></code> Hydra registry for package extension.</p></li>
-<li><p>Generic dataset and provider definition models with <code class="docutils literal notranslate"><span class="pre">/datasets</span></code> and <code class="docutils literal notranslate"><span class="pre">/providers</span></code> Hydra registries for package extension.</p></li>
+<li><p>Generic extract task composition through <code class="docutils literal notranslate"><span class="pre">/tasks</span></code>, <code class="docutils literal notranslate"><span class="pre">/datasets</span></code>, and <code class="docutils literal notranslate"><span class="pre">/outputs</span></code> config selections.</p></li>
 <li><p>Handoff metadata: <code class="docutils literal notranslate"><span class="pre">ETLArtifact</span></code> for typed stage artifacts.</p></li>
+<li><p>Artifact IO contracts: <code class="docutils literal notranslate"><span class="pre">ArtifactExistsModel</span></code>, <code class="docutils literal notranslate"><span class="pre">ArtifactWriteModel</span></code>, <code class="docutils literal notranslate"><span class="pre">ArtifactPublishModel</span></code>, and <code class="docutils literal notranslate"><span class="pre">NoOpArtifactStore</span></code> for backend-neutral existence checks, writes, publication, and artifact URIs.</p></li>
+<li><p>Task and output composition: <code class="docutils literal notranslate"><span class="pre">ExtractTaskModel</span></code>, <code class="docutils literal notranslate"><span class="pre">LocalFileOutput</span></code>, <code class="docutils literal notranslate"><span class="pre">NoOpArtifactStore</span></code>, and <code class="docutils literal notranslate"><span class="pre">/tasks</span></code> / <code class="docutils literal notranslate"><span class="pre">/outputs</span></code> config selections.</p></li>
 <li><p>Format-aware writes and cache handoffs: <code class="docutils literal notranslate"><span class="pre">LocalWriteModel</span></code>, <code class="docutils literal notranslate"><span class="pre">CachePutModel</span></code>, <code class="docutils literal notranslate"><span class="pre">CacheGetModel</span></code>, <code class="docutils literal notranslate"><span class="pre">PayloadCodec</span></code>, <code class="docutils literal notranslate"><span class="pre">LocalCacheStore</span></code>, and no-op cache defaults.</p></li>
-<li><p>Checkpointing: <code class="docutils literal notranslate"><span class="pre">CheckpointRecord</span></code>, checkpoint statuses, <code class="docutils literal notranslate"><span class="pre">CheckpointDecisionModel</span></code> for idempotent skip decisions, and no-op checkpoint defaults.</p></li>
 <li><p>Retry integration: compatibility exports for <code class="docutils literal notranslate"><span class="pre">ccflow</span></code> <code class="docutils literal notranslate"><span class="pre">RetryPolicy</span></code> and <code class="docutils literal notranslate"><span class="pre">RetryModel</span></code>; use <code class="docutils literal notranslate"><span class="pre">ccflow.evaluators.RetryEvaluator</span></code> for runtime evaluator retries.</p></li>
 <li><p>Execution policy: <code class="docutils literal notranslate"><span class="pre">ExecutionPolicy</span></code> for shared max-concurrency hints and rate spacing that evaluators and connector models can consume through the <code class="docutils literal notranslate"><span class="pre">/execution</span></code> Hydra group.</p></li>
-<li><p>Unit identity: <code class="docutils literal notranslate"><span class="pre">ETLUnitIdentity</span></code> for stable provider/dataset/partition/transform/destination keys.</p></li>
 <li><p>Run reporting: <code class="docutils literal notranslate"><span class="pre">RunSummary</span></code> for structured counts by status and artifact stage.</p></li>
 </ul>
 </section>
@@ -327,7 +327,7 @@ cc-etl-explain<span class="w"> </span>+context.path<span class="o">=</span>./exa
 </section>
 <section id="package-boundaries">
 <h2>Package Boundaries<a class="headerlink" href="#package-boundaries" title="Link to this heading">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">ccflow-etl</span></code> owns domain-neutral ETL contracts, generic credential shapes, and helpers. It does not own application workflows, provider clients, connector clients, provider-specific credential semantics, or domain-specific rules. Durable store implementations should live in connector packages and integrate through the generic cache and checkpoint contracts.</p>
+<p><code class="docutils literal notranslate"><span class="pre">ccflow-etl</span></code> owns domain-neutral ETL contracts, generic credential shapes, and helpers. It does not own application workflows, provider clients, connector clients, provider-specific credential semantics, dataset inventories, dataset-specific schemas, run reporting evaluators, checkpointing, or domain-specific rules. Durable store implementations should live in connector packages and integrate through generic cache and artifact IO contracts.</p>
 </section>
 </section>
 
@@ -370,7 +370,7 @@ cc-etl-explain<span class="w"> </span>+context.path<span class="o">=</span>./exa
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=938c9ccc"></script>
+</div><script src="_static/documentation_options.js?v=e259d695"></script>
     <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

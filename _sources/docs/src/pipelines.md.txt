@@ -80,6 +80,6 @@ cc-etl --config-path ./config --config-name text_stats +context.input_path=./not
 
 ## Design Guidelines
 
-Keep reusable infrastructure in `ccflow-etl` and keep workflow-specific behavior in the package or application that owns the workflow. Durable I/O implementations should live in connector packages; `ccflow-etl` works against small contracts such as byte stores and checkpoint stores.
+Keep reusable infrastructure in `ccflow-etl` and keep workflow-specific behavior in the package or application that owns the workflow. Durable I/O implementations should live in connector packages; `ccflow-etl` works against small contracts such as byte stores and artifact stores.
 
 Avoid adding a new generic base class unless it removes real duplication. A concrete `CallableModel` graph is usually easier to read, test, and compose than a broad extract/transform/load shell.
