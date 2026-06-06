@@ -1,6 +1,0 @@
-# @package datasets
-
-generic:
-  _target_: ccflow_etl.DatasetDefinition
-  name: generic
-  description: Generic dataset placeholder for applications that want to register dataset catalogs.

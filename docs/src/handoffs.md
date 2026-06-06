@@ -47,46 +47,61 @@ store = SQLiteCacheStore(config=SQLiteConfig(path="./cache.sqlite"), table="cach
 result = CacheGetModel(store=store, format="json")(CacheGetContext(key="text_stats/2026-05-01"))
 ```
 
-## Checkpoints And Skip Decisions
-
-`CheckpointDecisionModel` combines checkpoint stores and destination existence checks into planned or skipped units. Use it before calling expensive or non-idempotent work. Stores only need to provide `should_skip(key)`; connector packages can provide durable implementations.
-
-The packaged `checkpoint=noop` group registers `NoOpCheckpointStore` and keeps all units runnable. Connector packages can replace it with durable groups such as `checkpoint=s3` or `checkpoint=sqlite`.
-
 Typical unit statuses are:
 
 - `planned`: should run now.
-- `checkpoint`: skipped because a checkpoint says the unit already succeeded.
-- `exists`: skipped because the destination already exists.
-- `database`: skipped because a database destination already has the expected row.
+- `exists`: skipped because the output artifact already exists.
+- `database`: skipped because a database output already has the expected row.
 - `written` or `upserted`: completed successfully.
 - `failed`, `retried`, or `cancelled`: execution did not finish cleanly.
 
-## Datasets, Providers, And Unit Identity
+## Dataset Metadata
 
-`DatasetDefinition` describes what a data product is: semantic name, schema, partition keys, cadence, media types, expectations, and destination hints. `ProviderDefinition` describes how data can be obtained: provider type, credential reference, supported dataset references, capabilities, rate limits, retry metadata, and request templates.
+Concrete dataset models should expose their own metadata, such as semantic name, schema version, partition keys, cadence, media types, expectations, provider hints, and output hints. `ccflow-etl` does not add a separate dataset/provider/schema registry; use ccflow registration and Hydra config groups to select the concrete model.
 
 ```python
-from ccflow_etl import DatasetDefinition, ProviderDefinition
+class SampleRecordsModel:
+    dataset_name = "sample_records"
+    provider_name = "example_provider"
+    schema_name = "sample_record"
+    schema_version = "1"
+    partition_keys = ["date", "item_id"]
 
-dataset = DatasetDefinition(name="sample_records", partition_keys=["date", "item_id"], schema_name="sample_record", schema_version="1")
-provider = ProviderDefinition(name="example_provider", provider_type="http", dataset_refs=["/datasets/sample_records"])
+    def dataset_metadata(self):
+        return {
+            "name": self.dataset_name,
+            "schema_name": self.schema_name,
+            "schema_version": self.schema_version,
+            "partition_keys": self.partition_keys,
+        }
 ```
 
-`ETLUnitIdentity` gives cache, checkpoint, manifest, and destination code a stable key for one provider/dataset/partition/destination unit.
+## Artifact IO
+
+Artifact IO models provide a small contract for durable reads and writes without making any storage backend part of `ccflow-etl`.
+
+Artifact store implementations should provide:
+
+- `exists(key)`
+- `write(key, payload, media_type=None, metadata=None)`
+- `publish(key, source_key=None, source_uri=None, metadata=None)`
+- `artifact_uri(key)`
+
+Connector packages can implement this contract for object stores, databases, warehouses, or local files. Applications can use `NoOpArtifactStore` for explain-safe plans.
 
 ```python
-from ccflow_etl import ETLUnitIdentity
+from ccflow_etl import ArtifactWriteContext, ArtifactWriteModel, NoOpArtifactStore
 
-identity = ETLUnitIdentity(
-    provider="example_provider",
-    dataset="sample_records",
-    partition={"date": "2025-01-02", "item_id": "item-001"},
-    schema_version="1",
-    transform_version="raw",
-    destination="object_store",
+result = ArtifactWriteModel(store=NoOpArtifactStore())(
+    ArtifactWriteContext(
+        key="outputs/sample-records/2025-01-02.json",
+        payload=b"{}",
+        media_type="application/json",
+        dataset="sample_records",
+        dry_run=True,
+    )
 )
-checkpoint_key = identity.key(prefix="checkpoint")
+print(result.artifact.model_dump(mode="json"))
 ```
 
 ## Retries

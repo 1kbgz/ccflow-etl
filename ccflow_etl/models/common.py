@@ -44,8 +44,8 @@ class RunSummary(BaseModel):
         return cls(
             total=len(normalized_statuses),
             planned=by_status.get("planned", 0),
-            skipped=sum(by_status.get(status, 0) for status in ("checkpoint", "database", "exists", "skipped")),
-            succeeded=sum(by_status.get(status, 0) for status in ("succeeded", "success", "updated", "upserted", "written")),
+            skipped=sum(by_status.get(status, 0) for status in ("database", "exists", "skipped")),
+            succeeded=sum(by_status.get(status, 0) for status in ("published", "succeeded", "success", "updated", "upserted", "written")),
             failed=by_status.get("failed", 0),
             retried=by_status.get("retried", 0),
             cancelled=by_status.get("cancelled", 0),

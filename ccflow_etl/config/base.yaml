@@ -3,16 +3,15 @@
 defaults:
   - _self_
   - credentials: default
-  - datasets: default
-  - providers: default
   - execution: default
   - cache: noop
-  - checkpoint: noop
-  - callable: local_write
   - optional backfill: null
 
 model:
   _target_: ccflow_etl.LocalWriteModel
+
+task: ${model}
+callable: /task
 
 cli:
   model:

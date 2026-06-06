@@ -32,6 +32,7 @@ classifiers = [
 dependencies = [
     "ccflow>=0.8.5",
     "hydra-core",
+    "lerna",
     "pydantic",
     "pyarrow",
 ]
@@ -55,8 +56,6 @@ develop = [
     "ty",
     "uv",
     "wheel",
-    # tests and extras
-    "lerna",
 ]
 
 [project.scripts]

@@ -33,7 +33,6 @@ def test_run_summary_counts_statuses_and_handoff_stages():
     summary = RunSummary.from_items(
         [
             {"status": "planned"},
-            {"status": "checkpoint"},
             {"status": "exists"},
             {"status": "written"},
             {"status": "failed"},
@@ -45,11 +44,11 @@ def test_run_summary_counts_statuses_and_handoff_stages():
         ],
     )
 
-    assert summary.total == 5
+    assert summary.total == 4
     assert summary.planned == 1
-    assert summary.skipped == 2
+    assert summary.skipped == 1
     assert summary.succeeded == 1
     assert summary.failed == 1
-    assert summary.by_status == {"checkpoint": 1, "exists": 1, "failed": 1, "planned": 1, "written": 1}
+    assert summary.by_status == {"exists": 1, "failed": 1, "planned": 1, "written": 1}
     assert summary.by_stage == {"extract": 1, "load": 1, "transform": 1}
-    assert summary.legacy_counts() == {"planned": 1, "skipped": 2, "succeeded": 1, "failed": 1, "retried": 0, "cancelled": 0}
+    assert summary.legacy_counts() == {"planned": 1, "skipped": 1, "succeeded": 1, "failed": 1, "retried": 0, "cancelled": 0}
