@@ -10,27 +10,25 @@ from ccflow_etl import (
     APITokenCredentials,
     BackfillModel,
     DailyCalendar,
-    DatasetDefinition,
     ExecutionPolicy,
     LocalWriteModel,
     NoCredentials,
     NoOpCacheStore,
-    NoOpCheckpointStore,
     OAuthCredentials,
-    ProviderDefinition,
     UsernamePasswordCredentials,
     WeekdayCalendar,
     load_config,
 )
-from ccflow_etl.cli import main
+from ccflow_etl.cli import explain, main
 
 
 class TestBasic:
     def test_basic_example(self):
         cfg = load_config([], overwrite=True)
         assert isinstance(cfg["model"], LocalWriteModel)
+        assert isinstance(cfg["task"], LocalWriteModel)
 
-    def test_base_config_registers_credentials_and_noop_stores(self):
+    def test_base_config_registers_credentials_and_noop_cache_store(self):
         cfg = load_config([], overwrite=True)
 
         assert isinstance(cfg["credentials/none"], NoCredentials)
@@ -38,11 +36,8 @@ class TestBasic:
         assert isinstance(cfg["credentials/api_token"], APITokenCredentials)
         assert isinstance(cfg["credentials/api_key_secret"], APIKeySecretCredentials)
         assert isinstance(cfg["credentials/oauth"], OAuthCredentials)
-        assert isinstance(cfg["datasets/generic"], DatasetDefinition)
-        assert isinstance(cfg["providers/generic"], ProviderDefinition)
         assert isinstance(cfg["execution"], ExecutionPolicy)
         assert isinstance(cfg["cache/store"], NoOpCacheStore)
-        assert isinstance(cfg["checkpoint/store"], NoOpCheckpointStore)
 
     def test_packaged_backfill_interval_configs_register_default_intervals(self):
         for name, expected_offset in {
@@ -68,12 +63,12 @@ class TestBasic:
             assert ret is None
         assert output_path.exists()
 
-    def test_basic_cli_accepts_callable_group_alias(self, tmp_path):
+    def test_basic_cli_accepts_explicit_task_callable(self, tmp_path):
         output_path = tmp_path / "example.json"
         with patch.object(
             sys,
             "argv",
-            ["ccflow-etl", "callable=callable", f"+context.path={output_path}", "+context.payload.message=hello", "+context.overwrite=true"],
+            ["ccflow-etl", "callable=/task", f"+context.path={output_path}", "+context.payload.message=hello", "+context.overwrite=true"],
         ):
             ret = main()
             assert ret is None
@@ -155,9 +150,7 @@ class TestBasic:
         root_config_dir = str(Path(__file__).parents[1] / "config")
         backfill_config = Path(root_config_dir) / "backfill" / "daily.yaml"
         backfill_config_text = backfill_config.read_text()
-        callable_config_text = (Path(root_config_dir) / "callable" / "local_write.yaml").read_text()
         assert "context:" not in backfill_config_text
-        assert "context:" not in callable_config_text
         assert "start_datetime: ${backfill.start_datetime}" not in backfill_config_text
 
         result = base_load_config(
@@ -192,14 +185,35 @@ class TestBasic:
             ],
         }
 
-    def test_external_runner_config_can_use_packaged_callable_groups(self, tmp_path):
+    def test_explain_cli_prints_merged_config(self, capsys):
+        root_config_dir = str(Path(__file__).parents[1] / "config")
+        with patch.object(
+            sys,
+            "argv",
+            [
+                "cc-etl-explain",
+                "--no-gui",
+                "--config-path",
+                root_config_dir,
+                "model._target_=ccflow_etl.tests.test_backfill.EchoDateModel",
+                "backfill=daily",
+                "+context=[2024-01-02,2024-01-03]",
+            ],
+        ):
+            assert explain() is None
+
+        output = capsys.readouterr().out
+        assert "backfill" in output
+        assert "2024-01-02" in output
+        assert "2024-01-03" in output
+
+    def test_external_runner_config_can_use_packaged_task_default(self, tmp_path):
         config_path = tmp_path / "config"
         config_path.mkdir()
         (config_path / "runner.yaml").write_text(
             """
 defaults:
     - _self_
-    - /callable: callable
     - optional /backfill: null
 
 hydra:
@@ -208,6 +222,9 @@ hydra:
 
 model:
   _target_: ccflow_etl.tests.test_backfill.EchoDateModel
+
+task: ${model}
+callable: /task
 
 cli:
   model:

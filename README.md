@@ -15,12 +15,12 @@ Domain-neutral ETL building blocks for `ccflow` callable models.
 pip install ccflow-etl
 ```
 
-Connector-backed cache and checkpoint stores are provided by connector packages that own their I/O:
+Connector-backed cache and artifact stores are provided by connector packages that own their I/O. Generic checkpointing belongs in `ccflow` proper.
 
 | Package         | Type               | Integration                                   |
 | --------------- | ------------------ | --------------------------------------------- |
-| `ccflow-s3`     | generic, cache     | S3-backed cache and checkpoint store          |
-| `ccflow-db`     | generic, cache     | database-backed cache and checkpoint store    |
+| `ccflow-s3`     | generic, storage   | S3-backed artifact IO and cache               |
+| `ccflow-db`     | generic, cache     | database-backed cache store                   |
 | `ccflow-email`  | generic, publisher | email publishers for ETL notifications        |
 | `ccflow-celery` | generic, evaluator | Celery-based evaluator for ETL task execution |
 
@@ -44,13 +44,13 @@ cc-etl --config-path ./config --config-name text_stats +context.input_path=./not
 - Shared CLI entry points: `cc-etl` and `cc-etl-explain`.
 - Date expansion: `Interval`, `BaseCalendar`, built-in calendars, `BackfillContext`, and `BackfillModel`.
 - Generic credential models and a `/credentials` Hydra registry for package extension.
-- Generic dataset and provider definition models with `/datasets` and `/providers` Hydra registries for package extension.
+- Generic extract task composition through `/tasks`, `/datasets`, and `/outputs` config selections.
 - Handoff metadata: `ETLArtifact` for typed stage artifacts.
+- Artifact IO contracts: `ArtifactExistsModel`, `ArtifactWriteModel`, `ArtifactPublishModel`, and `NoOpArtifactStore` for backend-neutral existence checks, writes, publication, and artifact URIs.
+- Task and output composition: `ExtractTaskModel`, `LocalFileOutput`, `NoOpArtifactStore`, and `/tasks` / `/outputs` config selections.
 - Format-aware writes and cache handoffs: `LocalWriteModel`, `CachePutModel`, `CacheGetModel`, `PayloadCodec`, `LocalCacheStore`, and no-op cache defaults.
-- Checkpointing: `CheckpointRecord`, checkpoint statuses, `CheckpointDecisionModel` for idempotent skip decisions, and no-op checkpoint defaults.
 - Retry integration: compatibility exports for `ccflow` `RetryPolicy` and `RetryModel`; use `ccflow.evaluators.RetryEvaluator` for runtime evaluator retries.
 - Execution policy: `ExecutionPolicy` for shared max-concurrency hints and rate spacing that evaluators and connector models can consume through the `/execution` Hydra group.
-- Unit identity: `ETLUnitIdentity` for stable provider/dataset/partition/transform/destination keys.
 - Run reporting: `RunSummary` for structured counts by status and artifact stage.
 
 ## Documentation
@@ -64,4 +64,4 @@ cc-etl --config-path ./config --config-name text_stats +context.input_path=./not
 
 ## Package Boundaries
 
-`ccflow-etl` owns domain-neutral ETL contracts, generic credential shapes, and helpers. It does not own application workflows, provider clients, connector clients, provider-specific credential semantics, or domain-specific rules. Durable store implementations should live in connector packages and integrate through the generic cache and checkpoint contracts.
+`ccflow-etl` owns domain-neutral ETL contracts, generic credential shapes, and helpers. It does not own application workflows, provider clients, connector clients, provider-specific credential semantics, dataset inventories, dataset-specific schemas, run reporting evaluators, checkpointing, or domain-specific rules. Durable store implementations should live in connector packages and integrate through generic cache and artifact IO contracts.

@@ -1,7 +1,0 @@
-# @package providers
-
-generic:
-  _target_: ccflow_etl.ProviderDefinition
-  name: generic
-  description: Generic provider placeholder for applications that want to register provider catalogs.
-  provider_type: generic

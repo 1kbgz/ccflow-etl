@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from ccflow_etl import LocalWriteContext, LocalWriteModel, WriteModel
+from ccflow_etl import LocalFileOutput, LocalWriteContext, LocalWriteModel, WriteModel
 
 
 def test_local_write_model_writes_json_payload_with_generic_write_base(tmp_path):
@@ -58,3 +58,14 @@ def test_local_write_model_supports_non_json_formats(tmp_path):
 
     assert result.status == "written"
     assert output_path.read_text() == "hello"
+
+
+def test_local_file_output_implements_artifact_store_protocol(tmp_path):
+    output = LocalFileOutput(path=tmp_path, prefix="extracts")
+
+    result = output.write("sample/output.json", b'{"ok":true}', media_type="application/json")
+
+    assert result["status"] == "written"
+    assert output.exists("sample/output.json") is True
+    assert output.artifact_uri("sample/output.json").startswith("file://")
+    assert (tmp_path / "extracts" / "sample" / "output.json").read_text() == '{"ok":true}'

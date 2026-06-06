@@ -1,8 +1,10 @@
 import sys
 from pathlib import Path
+from pprint import pprint
 
 import hydra
-from ccflow.utils.hydra import cfg_explain_cli, cfg_run
+from ccflow.utils.hydra import cfg_run, get_args_parser_default_ui, load_config, resolve_config_paths, ui_launcher_default
+from omegaconf import OmegaConf
 
 __all__ = (
     "explain",
@@ -36,7 +38,30 @@ def _normalize_config_path_argv(argv: list[str]) -> list[str]:
 
 
 def explain():
-    cfg_explain_cli(config_path="config", config_name="base", hydra_main=_main)
+    parser = get_args_parser_default_ui()
+    args = parser.parse_args()
+    root_config_dir, root_config_name = resolve_config_paths(args, "config", "base", _main)
+    result = load_config(
+        root_config_dir=root_config_dir,
+        root_config_name=root_config_name,
+        config_dir=args.config_dir,
+        config_name=args.config_dir_config_name,
+        overrides=args.overrides,
+        basepath=args.basepath,
+        debug=True,
+    )
+    try:
+        merged_cfg = result.merge()
+    except Exception:
+        merged_cfg = OmegaConf.to_container(result.cfg, resolve=True)
+
+    if args.no_gui:
+        pprint(merged_cfg, width=120, indent=2)
+        return None
+    try:
+        ui_launcher_default(merged_cfg, **vars(args))
+    except ImportError:
+        raise ValueError("Cannot launch UI. Use --no-gui to print the results.") from None
 
 
 @hydra.main(config_path="config", config_name="base", version_base=None)
