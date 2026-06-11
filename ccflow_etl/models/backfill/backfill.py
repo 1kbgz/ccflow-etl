@@ -1,6 +1,6 @@
 from collections.abc import Mapping, Sequence
 from datetime import datetime
-from typing import Generic, List, Literal, Optional, Tuple, Type, TypeVar, Union
+from typing import ClassVar, Generic, List, Literal, Optional, Tuple, Type, TypeVar, Union
 
 from ccflow import (
     CallableModel,
@@ -11,6 +11,7 @@ from ccflow import (
     Flow,
     GenericContext,
     GenericResult,
+    ModelRegistry,
     NDArray,
     ResultBase,
     ResultType,
@@ -19,11 +20,13 @@ from numpy import datetime64
 from pydantic import Field, PrivateAttr, SerializeAsAny, model_validator
 
 from .calendar import BaseCalendar, IntervalCalendar
+from .dates import DateUtility
 from .interval import Interval
 
 __all__ = (
     "BackfillContext",
     "BackfillModel",
+    "BackfillRegistry",
 )
 
 
@@ -51,6 +54,13 @@ class BackfillContext(DatetimeRangeContext, Generic[C]):
         if value is None:
             return None
         return BaseCalendar._coerce_calendar(value)
+
+    @classmethod
+    def _resolve_datetime_value(cls, value, calendar):
+        if not (isinstance(value, str) and value.startswith(("/", "./", "../"))):
+            return value
+        utility = DateUtility.model_validate(value)
+        return utility.resolve(calendar=calendar)
 
     @classmethod
     def _coerce_cli_context(cls, v):
@@ -108,6 +118,8 @@ class BackfillContext(DatetimeRangeContext, Generic[C]):
                 v["interval"] = Interval.model_validate(interval)
         if "calendar" in v and v["calendar"] is not None:
             v["calendar"] = cls._coerce_calendar(v["calendar"])
+        v["start_datetime"] = cls._resolve_datetime_value(v["start_datetime"], v.get("calendar"))
+        v["end_datetime"] = cls._resolve_datetime_value(v["end_datetime"], v.get("calendar"))
         if v.get("calendar") is None:
             v["calendar"] = IntervalCalendar(interval=v.get("interval", Interval.model_validate("1D")))
             v["calendar_from_default"] = not has_calendar and not has_interval
@@ -192,3 +204,30 @@ class BackfillModel(CallableModel, Generic[C, R]):
             value = result.value if isinstance(result, GenericResult) else result.model_dump(mode="json")
             outputs.append({"context": step.model_dump(mode="json"), "value": value})
         return BackfillResult(value={"steps": len(outputs), "outputs": outputs})
+
+
+class BackfillRegistry(ModelRegistry):
+    intervals: ClassVar[Mapping[str, str]] = {
+        "hourly": "1h",
+        "first_day_of_month": "1MS",
+        "last_day_of_month": "1ME",
+    }
+
+    name: str = "backfills"
+    model: str = "/task"
+    calendar: str | None = None
+
+    def __getitem__(self, item) -> BackfillModel:
+        normalized = str(item).replace("-", "_")
+        if normalized in self.models:
+            return self.models[normalized]
+
+        if normalized not in {"default", "daily", *self.intervals}:
+            return super().__getitem__(item)
+
+        kwargs = {"model": self.model}
+        if normalized in self.intervals:
+            kwargs["interval"] = self.intervals[normalized]
+        elif self.calendar is not None:
+            kwargs["calendar"] = self.calendar
+        return self.add(normalized, BackfillModel(**kwargs), overwrite=True)

@@ -1,0 +1,9 @@
+# @package backfills
+
+defaults:
+  - /calendars: default
+  - _self_
+
+_target_: ccflow_etl.BackfillRegistry
+model: /task
+calendar: ${oc.select:calendar,null}
