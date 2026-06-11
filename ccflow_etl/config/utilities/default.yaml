@@ -1,0 +1,7 @@
+# @package utilities
+
+dates:
+  _target_: ccflow_etl.DateUtilityRegistry
+  calendar: ${oc.select:calendar,null}
+  as_of: null
+  lookback_days: 14

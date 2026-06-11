@@ -5,13 +5,14 @@ defaults:
   - credentials: default
   - execution: default
   - cache: noop
-  - optional backfill: null
+  - utilities: default
+  - backfills: default
 
 model:
   _target_: ccflow_etl.LocalWriteModel
 
 task: ${model}
-callable: /task
+callable: ${oc.select:backfill,/task}
 
 cli:
   model:

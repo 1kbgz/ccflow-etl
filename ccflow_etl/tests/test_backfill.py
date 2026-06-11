@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import date
-from typing import Type
+from typing import ClassVar, Type
 
 import pytest
-from ccflow import CallableModel, ContextType, DateContext, Flow, GenericResult, ResultType
+from ccflow import CallableModel, ContextType, DateContext, Flow, GenericResult, ModelRegistry, ResultType
 
-from ccflow_etl import BackfillContext, BackfillModel, WeekdayCalendar
+from ccflow_etl import BackfillContext, BackfillModel, BackfillRegistry, DateUtilityRegistry, LatestSessionDate, WeekdayCalendar
 
 
 def test_backfill_context_builds_business_day_contexts():
@@ -69,6 +70,23 @@ def test_backfill_context_accepts_calendar_in_compact_cli_list():
     assert [step.date for step in context.step_contexts()] == [date(2024, 1, 5), date(2024, 1, 8), date(2024, 1, 9)]
 
 
+def test_latest_session_date_uses_calendar_steps():
+    latest = LatestSessionDate(calendar=WeekdayCalendar(), as_of=date(2024, 1, 7))
+
+    assert latest.resolve().date() == date(2024, 1, 5)
+
+
+def test_backfill_context_resolves_date_utility_registry_reference():
+    root = ModelRegistry.root()
+    utilities = ModelRegistry(name="test_utilities")
+    utilities.add("dates", DateUtilityRegistry(calendar=WeekdayCalendar(), as_of=date(2024, 1, 7)))
+    root.add("test_utilities", utilities, overwrite=True)
+
+    context = BackfillContext[DateContext].model_validate(["2024-01-02", "/test_utilities/dates/latest-session"])
+
+    assert context.end_datetime.date() == date(2024, 1, 5)
+
+
 class EchoDateModel(CallableModel):
     @property
     def context_type(self) -> Type[ContextType]:
@@ -99,3 +117,18 @@ def test_backfill_model_default_interval_does_not_override_explicit_context_inte
     result = BackfillModel(model=EchoDateModel(), interval="1h")(["2024-01-02", "2024-01-03", {}, "forward", "1D"])
 
     assert result.value["steps"] == 2
+
+
+def test_backfill_registry_interval_aliases_are_class_overridable():
+    class CustomBackfillRegistry(BackfillRegistry):
+        intervals: ClassVar[Mapping[str, str]] = {"weekly": "1W"}
+
+    root = ModelRegistry.root()
+    root.add("test_task", EchoDateModel(), overwrite=True)
+    root.add("custom_backfills", CustomBackfillRegistry(model="/test_task"), overwrite=True)
+
+    weekly = root["/custom_backfills/weekly"]
+
+    assert isinstance(weekly, BackfillModel)
+    assert weekly.interval.offset == "W"
+    assert weekly.interval.n == 1

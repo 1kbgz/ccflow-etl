@@ -48,13 +48,13 @@ class TestBasic:
             cfg = load_config(
                 [
                     "model._target_=ccflow_etl.tests.test_backfill.EchoDateModel",
-                    f"backfill={name}",
+                    f"+backfill=/backfills/{name}",
                 ],
                 overwrite=True,
             )
-            assert isinstance(cfg["backfill"], BackfillModel)
-            assert cfg["backfill"].interval.offset == expected_offset
-            assert cfg["backfill"].interval.n == 1
+            assert isinstance(cfg[f"backfills/{name}"], BackfillModel)
+            assert cfg[f"backfills/{name}"].interval.offset == expected_offset
+            assert cfg[f"backfills/{name}"].interval.n == 1
 
     def test_basic_cli(self, tmp_path):
         output_path = tmp_path / "example.json"
@@ -81,7 +81,7 @@ class TestBasic:
             root_config_name="base",
             overrides=[
                 "model._target_=ccflow_etl.tests.test_backfill.EchoDateModel",
-                "backfill=default",
+                "+backfill=/backfills/default",
                 "+context=[2024-01-02,2024-01-03]",
             ],
             basepath=root_config_dir,
@@ -93,23 +93,23 @@ class TestBasic:
         cfg = load_config(
             [
                 "model._target_=ccflow_etl.tests.test_backfill.EchoDateModel",
-                "backfill=default",
+                "+backfill=/backfills/default",
                 "+context=[2024-01-02,2024-01-03]",
             ],
             overwrite=True,
         )
-        assert isinstance(cfg["backfill"], BackfillModel)
+        assert isinstance(cfg["backfills/default"], BackfillModel)
         assert isinstance(cfg["calendars/daily"], DailyCalendar)
         assert isinstance(cfg["calendars/weekdays"], WeekdayCalendar)
         daily_cfg = load_config(
             [
                 "model._target_=ccflow_etl.tests.test_backfill.EchoDateModel",
-                "backfill=daily",
+                "+backfill=/backfills/daily",
                 "+context=[2024-01-02,2024-01-03]",
             ],
             overwrite=True,
         )
-        assert isinstance(daily_cfg["backfill"], BackfillModel)
+        assert isinstance(daily_cfg["backfills/daily"], BackfillModel)
         assert output.value == {
             "steps": 2,
             "outputs": [
@@ -125,7 +125,7 @@ class TestBasic:
             root_config_name="base",
             overrides=[
                 "model._target_=ccflow_etl.tests.test_backfill.EchoDateModel",
-                "backfill=daily",
+                "+backfill=/backfills/daily",
                 "+context.start_datetime=2024-01-05",
                 "+context.end_datetime=2024-01-09",
                 "+context.template.date=2024-01-05",
@@ -148,7 +148,7 @@ class TestBasic:
 
     def test_backfill_daily_group_wraps_configured_model_without_context_preset(self):
         root_config_dir = str(Path(__file__).parents[1] / "config")
-        backfill_config = Path(root_config_dir) / "backfill" / "daily.yaml"
+        backfill_config = Path(root_config_dir) / "backfills" / "default.yaml"
         backfill_config_text = backfill_config.read_text()
         assert "context:" not in backfill_config_text
         assert "start_datetime: ${backfill.start_datetime}" not in backfill_config_text
@@ -158,30 +158,58 @@ class TestBasic:
             root_config_name="base",
             overrides=[
                 "model._target_=ccflow_etl.tests.test_backfill.EchoDateModel",
-                "backfill=daily",
+                "+backfill=/backfills/daily",
                 "+context=[2024-01-02,2024-01-03]",
             ],
             basepath=root_config_dir,
             debug=False,
         )
 
-        assert result.cfg["callable"] == "/backfill"
+        assert result.cfg["callable"] == "/backfills/daily"
         output = cfg_run(result.cfg)
 
         cfg = load_config(
             [
                 "model._target_=ccflow_etl.tests.test_backfill.EchoDateModel",
-                "backfill=daily",
+                "+backfill=/backfills/daily",
                 "+context=[2024-01-02,2024-01-03]",
             ],
             overwrite=True,
         )
-        assert isinstance(cfg["backfill"], BackfillModel)
+        assert isinstance(cfg["backfills/daily"], BackfillModel)
         assert output.value == {
             "steps": 2,
             "outputs": [
                 {"context": {"date": "2024-01-02", "type_": "ccflow.context.DateContext"}, "value": {"date": "2024-01-02"}},
                 {"context": {"date": "2024-01-03", "type_": "ccflow.context.DateContext"}, "value": {"date": "2024-01-03"}},
+            ],
+        }
+
+    def test_backfill_daily_group_resolves_latest_session_utility(self):
+        root_config_dir = str(Path(__file__).parents[1] / "config")
+        result = base_load_config(
+            root_config_dir=root_config_dir,
+            root_config_name="base",
+            overrides=[
+                "model._target_=ccflow_etl.tests.test_backfill.EchoDateModel",
+                "+calendar=/calendars/weekdays",
+                "+backfill=/backfills/daily",
+                "utilities.dates.as_of=2024-01-07",
+                "+context=[2024-01-02,/utilities/dates/latest-session]",
+            ],
+            basepath=root_config_dir,
+            debug=False,
+        )
+
+        output = cfg_run(result.cfg)
+
+        assert output.value == {
+            "steps": 4,
+            "outputs": [
+                {"context": {"date": "2024-01-02", "type_": "ccflow.context.DateContext"}, "value": {"date": "2024-01-02"}},
+                {"context": {"date": "2024-01-03", "type_": "ccflow.context.DateContext"}, "value": {"date": "2024-01-03"}},
+                {"context": {"date": "2024-01-04", "type_": "ccflow.context.DateContext"}, "value": {"date": "2024-01-04"}},
+                {"context": {"date": "2024-01-05", "type_": "ccflow.context.DateContext"}, "value": {"date": "2024-01-05"}},
             ],
         }
 
@@ -196,7 +224,7 @@ class TestBasic:
                 "--config-path",
                 root_config_dir,
                 "model._target_=ccflow_etl.tests.test_backfill.EchoDateModel",
-                "backfill=daily",
+                "+backfill=/backfills/daily",
                 "+context=[2024-01-02,2024-01-03]",
             ],
         ):
@@ -214,7 +242,7 @@ class TestBasic:
             """
 defaults:
     - _self_
-    - optional /backfill: null
+    - /backfills: default
 
 hydra:
   searchpath:
@@ -224,7 +252,7 @@ model:
   _target_: ccflow_etl.tests.test_backfill.EchoDateModel
 
 task: ${model}
-callable: /task
+callable: ${oc.select:backfill,/task}
 
 cli:
   model:
@@ -251,7 +279,7 @@ cli:
                 str(config_path),
                 "--config-name",
                 "runner",
-                "backfill=daily",
+                "+backfill=/backfills/daily",
                 "+context=[2024-01-02,2024-01-03]",
             ],
         ):

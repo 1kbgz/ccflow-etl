@@ -54,7 +54,7 @@ context:
 `ccflow-etl` ships small, domain-neutral config groups:
 
 - `callable/callable`: run `/model` directly.
-- `backfill/*`: wrap `/model` in `BackfillModel`.
+- `backfills/default`: register reusable `BackfillModel` objects under `/backfills/...`.
 - `calendars/*`: register reusable calendar objects for backfilling.
 - `credentials/default`: register generic credential shapes for packages to extend.
 - `cache/noop`: register a no-op cache store plus matching get/put models.
@@ -66,7 +66,7 @@ To use those groups from a project config, add the package config directory to t
 defaults:
   - _self_
   - /callable: callable
-  - optional /backfill: null
+  - /backfills: default
 
 hydra:
   searchpath:
@@ -74,6 +74,9 @@ hydra:
 
 model:
   _target_: text_pipeline.TextStatsModel
+
+task: ${model}
+callable: ${oc.select:backfill,/task}
 
 cli:
   model:
@@ -96,7 +99,7 @@ cc-etl --config-path ./config --config-name text_stats_runner +context.input_pat
 Run the same model as a backfill:
 
 ```bash
-cc-etl --config-path ./config --config-name text_stats_runner backfill=daily +context.start_datetime=2026-05-01 +context.end_datetime=2026-05-03 +context.interval=daily +context.template.input_path=./notes.txt +context.template.output_path=./stats.json +context.template.min_length=1
+cc-etl --config-path ./config --config-name text_stats_runner +backfill=/backfills/daily +context.start_datetime=2026-05-01 +context.end_datetime=2026-05-03 +context.interval=daily +context.template.input_path=./notes.txt +context.template.output_path=./stats.json +context.template.min_length=1
 ```
 
 Connector packages can add their own package config directories through Hydra lerna plugins. For example, `ccflow-s3` contributes `cache=s3`, and `ccflow-db` can contribute `cache=sqlite`. The packaged `ccflow-etl` base defaults remain no-op, so local runners can opt into durable stores by changing only config groups.
@@ -105,6 +108,9 @@ For static runner configs that set root `context` values in the file, compose th
 
 ```yaml
 defaults:
-  - /backfill: daily
+  - /backfills: default
   - _self_
+
+backfill: /backfills/daily
+callable: ${oc.select:backfill,/task}
 ```
