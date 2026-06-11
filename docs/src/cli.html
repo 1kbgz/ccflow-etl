@@ -290,7 +290,7 @@ cc-etl-explain<span class="w"> </span>+context.path<span class="o">=</span>./exa
 <p><code class="docutils literal notranslate"><span class="pre">ccflow-etl</span></code> ships small, domain-neutral config groups:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">callable/callable</span></code>: run <code class="docutils literal notranslate"><span class="pre">/model</span></code> directly.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">backfill/*</span></code>: wrap <code class="docutils literal notranslate"><span class="pre">/model</span></code> in <code class="docutils literal notranslate"><span class="pre">BackfillModel</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">backfills/default</span></code>: register reusable <code class="docutils literal notranslate"><span class="pre">BackfillModel</span></code> objects under <code class="docutils literal notranslate"><span class="pre">/backfills/...</span></code>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">calendars/*</span></code>: register reusable calendar objects for backfilling.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">credentials/default</span></code>: register generic credential shapes for packages to extend.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">cache/noop</span></code>: register a no-op cache store plus matching get/put models.</p></li>
@@ -300,7 +300,7 @@ cc-etl-explain<span class="w"> </span>+context.path<span class="o">=</span>./exa
 <span class="nt">defaults</span><span class="p">:</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">_self_</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">/callable</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">callable</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">optional /backfill</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">/backfills</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">default</span>
 
 <span class="nt">hydra</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">searchpath</span><span class="p">:</span>
@@ -308,6 +308,9 @@ cc-etl-explain<span class="w"> </span>+context.path<span class="o">=</span>./exa
 
 <span class="nt">model</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">_target_</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">text_pipeline.TextStatsModel</span>
+
+<span class="nt">task</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${model}</span>
+<span class="nt">callable</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${oc.select:backfill,/task}</span>
 
 <span class="nt">cli</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">model</span><span class="p">:</span>
@@ -326,14 +329,17 @@ cc-etl-explain<span class="w"> </span>+context.path<span class="o">=</span>./exa
 </pre></div>
 </div>
 <p>Run the same model as a backfill:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cc-etl<span class="w"> </span>--config-path<span class="w"> </span>./config<span class="w"> </span>--config-name<span class="w"> </span>text_stats_runner<span class="w"> </span><span class="nv">backfill</span><span class="o">=</span>daily<span class="w"> </span>+context.start_datetime<span class="o">=</span><span class="m">2026</span>-05-01<span class="w"> </span>+context.end_datetime<span class="o">=</span><span class="m">2026</span>-05-03<span class="w"> </span>+context.interval<span class="o">=</span>daily<span class="w"> </span>+context.template.input_path<span class="o">=</span>./notes.txt<span class="w"> </span>+context.template.output_path<span class="o">=</span>./stats.json<span class="w"> </span>+context.template.min_length<span class="o">=</span><span class="m">1</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cc-etl<span class="w"> </span>--config-path<span class="w"> </span>./config<span class="w"> </span>--config-name<span class="w"> </span>text_stats_runner<span class="w"> </span>+backfill<span class="o">=</span>/backfills/daily<span class="w"> </span>+context.start_datetime<span class="o">=</span><span class="m">2026</span>-05-01<span class="w"> </span>+context.end_datetime<span class="o">=</span><span class="m">2026</span>-05-03<span class="w"> </span>+context.interval<span class="o">=</span>daily<span class="w"> </span>+context.template.input_path<span class="o">=</span>./notes.txt<span class="w"> </span>+context.template.output_path<span class="o">=</span>./stats.json<span class="w"> </span>+context.template.min_length<span class="o">=</span><span class="m">1</span>
 </pre></div>
 </div>
 <p>Connector packages can add their own package config directories through Hydra lerna plugins. For example, <code class="docutils literal notranslate"><span class="pre">ccflow-s3</span></code> contributes <code class="docutils literal notranslate"><span class="pre">cache=s3</span></code>, and <code class="docutils literal notranslate"><span class="pre">ccflow-db</span></code> can contribute <code class="docutils literal notranslate"><span class="pre">cache=sqlite</span></code>. The packaged <code class="docutils literal notranslate"><span class="pre">ccflow-etl</span></code> base defaults remain no-op, so local runners can opt into durable stores by changing only config groups.</p>
 <p>For static runner configs that set root <code class="docutils literal notranslate"><span class="pre">context</span></code> values in the file, compose the packaged group before <code class="docutils literal notranslate"><span class="pre">_self_</span></code> so local runtime values override group defaults:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">defaults</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">/backfill</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">daily</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">/backfills</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">default</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">_self_</span>
+
+<span class="nt">backfill</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/backfills/daily</span>
+<span class="nt">callable</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${oc.select:backfill,/task}</span>
 </pre></div>
 </div>
 </section>

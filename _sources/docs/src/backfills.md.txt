@@ -62,17 +62,17 @@ cc-etl --config-path ./config --config-name backfill_text_stats
 
 ## Packaged Backfill Groups
 
-Most projects can use the packaged groups instead of creating a separate backfill config for every callable. The root `context` remains the `ccflow` runtime context. For a backfill run, it is a `BackfillContext`; the wrapped callable's seed context is nested under `context.template`, or passed as the third item in compact list form.
+Most projects can use the packaged `/backfills/...` registry entries instead of creating a separate backfill config for every callable. The root `context` remains the `ccflow` runtime context. For a backfill run, it is a `BackfillContext`; the wrapped callable's seed context is nested under `context.template`, or passed as the third item in compact list form.
 
-The packaged backfill groups do not create a separate `backfill.context` shadow namespace.
+The packaged backfill registry entries do not create a separate `backfill.context` shadow namespace.
 
 Built-in calendars are available under `/calendars`: `daily`, `hourly`, `weekly`, `first_day_of_month`, `last_day_of_month`, `weekdays`, `business_daily`, and `monday_friday`. Set `context.calendar` to one of those paths when you want the calendar object to choose steps instead of the interval shorthand:
 
 ```bash
-cc-etl --config-path ./config --config-name text_stats_runner backfill=daily +context.start_datetime=2026-05-01 +context.end_datetime=2026-05-15 +context.calendar=/calendars/weekdays +context.template.input_path=./notes.txt +context.template.output_path=./stats.json +context.template.min_length=1
+cc-etl --config-path ./config --config-name text_stats_runner +backfill=/backfills/daily +context.start_datetime=2026-05-01 +context.end_datetime=2026-05-15 +context.calendar=/calendars/weekdays +context.template.input_path=./notes.txt +context.template.output_path=./stats.json +context.template.min_length=1
 ```
 
-Named packaged backfill groups can also choose the default interval without creating a root `context` namespace in config. Use `backfill=hourly`, `backfill=first_day_of_month`, or `backfill=last_day_of_month` when the config group should supply the interval and runtime context should supply only the range and wrapped callable template.
+Named packaged backfill entries can also choose the default interval without creating a root `context` namespace in config. Use `+backfill=/backfills/hourly`, `+backfill=/backfills/first_day_of_month`, or `+backfill=/backfills/last_day_of_month` when the selected entry should supply the interval and runtime context should supply only the range and wrapped callable template.
 
 ## Supported Intervals
 
