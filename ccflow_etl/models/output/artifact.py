@@ -169,6 +169,8 @@ class ArtifactWriteModel(CallableModel):
 
 
 class ArtifactReadModel(CallableModel):
+    """Read a full artifact payload, propagating backend errors for missing keys."""
+
     store: Any
 
     @property
