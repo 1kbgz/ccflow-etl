@@ -100,6 +100,9 @@ class LocalFileOutput(WriteModel):
     def exists(self, key: str) -> bool:
         return self.file_path(key).exists()
 
+    def read(self, key: str) -> bytes:
+        return self.file_path(key).read_bytes()
+
     def write(self, key: str, payload: bytes, media_type: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         output_path = self.file_path(key)
         output_path.parent.mkdir(parents=True, exist_ok=True)

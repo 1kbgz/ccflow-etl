@@ -3,6 +3,8 @@ from ccflow_etl import (
     ArtifactExistsModel,
     ArtifactPublishContext,
     ArtifactPublishModel,
+    ArtifactReadContext,
+    ArtifactReadModel,
     ArtifactWriteContext,
     ArtifactWriteModel,
     ETLArtifact,
@@ -22,6 +24,9 @@ class RecordingArtifactStore:
     def exists(self, key):
         return key in self.existing
 
+    def read(self, key):
+        return b'{"ticker":"AAA"}'
+
     def write(self, key, payload, media_type=None, metadata=None):
         self.writes.append((key, payload, media_type, metadata or {}))
         self.existing.add(key)
@@ -40,6 +45,7 @@ def test_artifact_models_plan_write_and_publish_without_backend_assumptions():
     dry_run = ArtifactWriteModel(store=store)(
         ArtifactWriteContext(key="outputs/planned.json", payload=b"{}", media_type="application/json", dataset="sample_records", dry_run=True)
     )
+    read_result = ArtifactReadModel(store=store)(ArtifactReadContext(key="outputs/existing.json"))
     write_result = ArtifactWriteModel(store=store)(
         ArtifactWriteContext(key="outputs/new.json", payload=b"{}", media_type="application/json", dataset="sample_records")
     )
@@ -54,6 +60,9 @@ def test_artifact_models_plan_write_and_publish_without_backend_assumptions():
     assert exists_result.status == "exists"
     assert dry_run.status == "planned"
     assert dry_run.artifact.status == "planned"
+    assert read_result.status == "read"
+    assert read_result.payload == b'{"ticker":"AAA"}'
+    assert read_result.uri == "recording://outputs/existing.json"
     assert write_result.status == "written"
     assert write_result.metadata == {"etag": "abc123"}
     assert write_result.artifact.uri == "recording://outputs/new.json"
