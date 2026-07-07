@@ -11,8 +11,10 @@ from ccflow_etl import (
     BackfillModel,
     DailyCalendar,
     ExecutionPolicy,
+    LocalFileOutput,
     LocalWriteModel,
     NoCredentials,
+    NoOpArtifactStore,
     NoOpCacheStore,
     OAuthCredentials,
     UsernamePasswordCredentials,
@@ -38,6 +40,15 @@ class TestBasic:
         assert isinstance(cfg["credentials/oauth"], OAuthCredentials)
         assert isinstance(cfg["execution"], ExecutionPolicy)
         assert isinstance(cfg["cache/store"], NoOpCacheStore)
+
+    def test_packaged_output_configs_register_artifact_stores(self):
+        disk_cfg = load_config(["+output=/outputs/disk"], overwrite=True)
+        assert isinstance(disk_cfg["output"], LocalFileOutput)
+        assert disk_cfg["output"].prefix == ""
+
+        noop_cfg = load_config(["+output=/outputs/noop"], overwrite=True)
+        assert isinstance(noop_cfg["output"], NoOpArtifactStore)
+        assert noop_cfg["output"].uri_prefix == "noop://output"
 
     def test_packaged_backfill_interval_configs_register_default_intervals(self):
         for name, expected_offset in {

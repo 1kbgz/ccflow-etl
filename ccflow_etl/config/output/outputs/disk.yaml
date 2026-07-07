@@ -1,0 +1,4 @@
+# @package output
+
+_target_: ccflow_etl.LocalFileOutput
+prefix: ""
