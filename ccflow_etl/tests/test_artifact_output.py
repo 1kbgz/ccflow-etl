@@ -1,3 +1,5 @@
+import pytest
+
 from ccflow_etl import (
     ArtifactExistsContext,
     ArtifactExistsModel,
@@ -25,6 +27,8 @@ class RecordingArtifactStore:
         return key in self.existing
 
     def read(self, key):
+        if key not in self.existing:
+            raise FileNotFoundError(key)
         return b'{"ticker":"AAA"}'
 
     def write(self, key, payload, media_type=None, metadata=None):
@@ -71,6 +75,13 @@ def test_artifact_models_plan_write_and_publish_without_backend_assumptions():
     assert existing_write.status == "exists"
     assert store.writes == [("outputs/new.json", b"{}", "application/json", {})]
     assert store.publishes == [("outputs/final.json", "tmp/final.json", None, {})]
+
+
+def test_artifact_read_model_propagates_missing_store_error():
+    store = RecordingArtifactStore()
+
+    with pytest.raises(FileNotFoundError):
+        ArtifactReadModel(store=store)(ArtifactReadContext(key="outputs/missing.json"))
 
 
 def test_noop_artifact_store_returns_explain_safe_artifacts():
