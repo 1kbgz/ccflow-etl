@@ -70,3 +70,5 @@ def test_local_file_output_implements_artifact_store_protocol(tmp_path):
     assert output.read("sample/output.json") == b'{"ok":true}'
     assert output.artifact_uri("sample/output.json").startswith("file://")
     assert (tmp_path / "extracts" / "sample" / "output.json").read_text() == '{"ok":true}'
+    assert output.list_keys("sample") == ["sample/output.json"]
+    assert output.list_keys("missing") == []

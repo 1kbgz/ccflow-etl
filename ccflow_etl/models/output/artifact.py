@@ -237,6 +237,9 @@ class NoOpArtifactStore(BaseModel):
     def exists(self, key: str) -> bool:
         return False
 
+    def list_keys(self, prefix: str = "") -> list[str]:
+        return []
+
     def write(self, key: str, payload: bytes, media_type: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         return {"key": key, "media_type": media_type, "status": "noop", **(metadata or {})}
 

@@ -100,6 +100,15 @@ class LocalFileOutput(WriteModel):
     def exists(self, key: str) -> bool:
         return self.file_path(key).exists()
 
+    def list_keys(self, prefix: str = "") -> list[str]:
+        root = self.path / self.prefix.strip("/")
+        target = root / prefix.strip("/")
+        if target.is_file():
+            return [target.relative_to(root).as_posix()]
+        if not target.exists():
+            return []
+        return sorted(path.relative_to(root).as_posix() for path in target.rglob("*") if path.is_file())
+
     def read(self, key: str) -> bytes:
         return self.file_path(key).read_bytes()
 
