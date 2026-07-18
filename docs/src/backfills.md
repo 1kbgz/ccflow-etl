@@ -37,6 +37,8 @@ cli:
         - _target_: ccflow.evaluators.GraphEvaluator
         - _target_: ccflow.evaluators.MemoryCacheEvaluator
         - _target_: ccflow.evaluators.LoggingEvaluator
+          reporter:
+            _target_: ccflow.utils.reporting.LoggingReporter
     cacheable: true
 
 backfill:
