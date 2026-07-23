@@ -1,5 +1,5 @@
 from json import dumps
-from typing import Any, Dict, List, Optional, Type
+from typing import Any
 
 from ccflow import CallableModel, ContextBase, ContextType, Flow, GenericResult, ResultType
 from pydantic import Field
@@ -12,16 +12,16 @@ __all__ = ("ExtractTaskModel",)
 
 class ExtractTaskModel(CallableModel):
     dataset: Any
-    output: Optional[Any] = None
+    output: Any | None = None
     transforms: Any = Field(default_factory=list)
     explain: bool = False
 
     @property
-    def context_type(self) -> Type[ContextType]:
+    def context_type(self) -> type[ContextType]:
         return self.dataset.context_type if hasattr(self.dataset, "context_type") else ContextBase
 
     @property
-    def result_type(self) -> Type[ResultType]:
+    def result_type(self) -> type[ResultType]:
         return GenericResult
 
     def _dataset_for_mode(self) -> Any:
@@ -43,14 +43,14 @@ class ExtractTaskModel(CallableModel):
             return dumps(payload, separators=(",", ":"), sort_keys=True, default=str).encode("utf-8")
         return self._codec(return_type).encode(payload)
 
-    def _result_payloads(self, payload: Dict[str, Any], keys: List[str]) -> List[Any]:
+    def _result_payloads(self, payload: dict[str, Any], keys: list[str]) -> list[Any]:
         if "payloads" in payload:
             return list(payload["payloads"])
         if "results" in payload:
             return list(payload["results"])
         return [{} for _ in keys]
 
-    def _write_outputs(self, payload: Dict[str, Any], *, dry_run: bool) -> List[Any]:
+    def _write_outputs(self, payload: dict[str, Any], *, dry_run: bool) -> list[Any]:
         if self.output is None:
             return []
         return_type = self._return_type()

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, Optional, Type
+from typing import Any
 from uuid import uuid4
 
 from ccflow import BaseModel, CallableModel, ContextBase, ContextType, Flow, ResultBase, ResultType
@@ -31,11 +31,11 @@ def _cache_uri(store: Any, key: str) -> str:
     return key
 
 
-def _artifact(key: str, uri: str, dataset: Optional[str], stage: ETLStage, status: str, codec: PayloadCodec) -> ETLArtifact:
+def _artifact(key: str, uri: str, dataset: str | None, stage: ETLStage, status: str, codec: PayloadCodec) -> ETLArtifact:
     return ETLArtifact(key=key, dataset=dataset, stage=stage, uri=uri, media_type=codec.media_type, status=status)
 
 
-def _logical_key(key: Optional[str], path: Optional[Path]) -> str:
+def _logical_key(key: str | None, path: Path | None) -> str:
     if key is not None:
         return key
     if path is not None:
@@ -43,7 +43,7 @@ def _logical_key(key: Optional[str], path: Optional[Path]) -> str:
     raise ValueError("Cache contexts require either key or path.")
 
 
-def _resolve_cache_key(store: Any, key: Optional[str], path: Optional[Path], suffix: str) -> str:
+def _resolve_cache_key(store: Any, key: str | None, path: Path | None, suffix: str) -> str:
     if hasattr(store, "resolve_key"):
         return store.resolve_key(key=key, path=path, suffix=suffix)
     if path is not None:
@@ -54,10 +54,10 @@ def _resolve_cache_key(store: Any, key: Optional[str], path: Optional[Path], suf
 
 
 class CachePutContext(ContextBase):
-    key: Optional[str] = None
-    path: Optional[Path] = None
+    key: str | None = None
+    path: Path | None = None
     payload: Any
-    dataset: Optional[str] = None
+    dataset: str | None = None
     stage: ETLStage = "load"
     overwrite: bool = False
 
@@ -67,15 +67,15 @@ class CachePutResult(ResultBase):
     cache_key: str
     uri: str
     format: CacheFormat
-    media_type: Optional[str] = None
+    media_type: str | None = None
     status: str
     artifact: ETLArtifact
 
 
 class CacheGetContext(ContextBase):
-    key: Optional[str] = None
-    path: Optional[Path] = None
-    dataset: Optional[str] = None
+    key: str | None = None
+    path: Path | None = None
+    dataset: str | None = None
     stage: ETLStage = "load"
     missing_ok: bool = True
 
@@ -85,9 +85,9 @@ class CacheGetResult(ResultBase):
     cache_key: str
     uri: str
     format: CacheFormat
-    media_type: Optional[str] = None
+    media_type: str | None = None
     status: str
-    payload: Optional[Any] = None
+    payload: Any | None = None
     artifact: ETLArtifact
 
 
@@ -100,11 +100,11 @@ class CachePutModel(CallableModel):
         return PayloadCodec(format=self.format)
 
     @property
-    def context_type(self) -> Type[ContextType]:
+    def context_type(self) -> type[ContextType]:
         return CachePutContext
 
     @property
-    def result_type(self) -> Type[ResultType]:
+    def result_type(self) -> type[ResultType]:
         return CachePutResult
 
     def resolve_key(self, context: CachePutContext) -> str:
@@ -142,11 +142,11 @@ class CacheGetModel(CallableModel):
         return PayloadCodec(format=self.format)
 
     @property
-    def context_type(self) -> Type[ContextType]:
+    def context_type(self) -> type[ContextType]:
         return CacheGetContext
 
     @property
-    def result_type(self) -> Type[ResultType]:
+    def result_type(self) -> type[ResultType]:
         return CacheGetResult
 
     def resolve_key(self, context: CacheGetContext) -> str:
@@ -187,16 +187,16 @@ class CacheGetModel(CallableModel):
 
 
 class LocalCacheStore(BaseModel):
-    root: Optional[Path] = None
+    root: Path | None = None
 
-    def resolve_path(self, path: Optional[Path] = None, key: Optional[str] = None, suffix: str = "") -> Path:
+    def resolve_path(self, path: Path | None = None, key: str | None = None, suffix: str = "") -> Path:
         if path is not None:
             return path
         if self.root is None or not key:
             raise ValueError("LocalCacheStore requires either a path or both root and key")
         return self.root / _cache_key(key, suffix)
 
-    def resolve_key(self, key: Optional[str] = None, path: Optional[Path] = None, suffix: str = "") -> str:
+    def resolve_key(self, key: str | None = None, path: Path | None = None, suffix: str = "") -> str:
         return str(self.resolve_path(path=path, key=key, suffix=suffix))
 
     def uri(self, key: str) -> str:
@@ -205,7 +205,7 @@ class LocalCacheStore(BaseModel):
     def exists(self, key: str) -> bool:
         return Path(key).exists()
 
-    def put_bytes(self, key: str, value: bytes, content_type: Optional[str] = None) -> str:
+    def put_bytes(self, key: str, value: bytes, content_type: str | None = None) -> str:
         path = Path(key)
         path.parent.mkdir(parents=True, exist_ok=True)
         temp_path = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
@@ -228,7 +228,7 @@ class NoOpCacheStore(BaseModel):
     def exists(self, key: str) -> bool:
         return False
 
-    def put_bytes(self, key: str, value: bytes, content_type: Optional[str] = None) -> Dict[str, str]:
+    def put_bytes(self, key: str, value: bytes, content_type: str | None = None) -> dict[str, str]:
         return {"key": key, "status": "noop"}
 
     def get_bytes(self, key: str) -> bytes:

@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Type
+from typing import Any
 
 from ccflow import BaseModel, CallableModel, ContextBase, ContextType, Flow, ResultBase, ResultType
 from pydantic import Field
@@ -9,12 +9,12 @@ __all__ = (
     "ArtifactExistsContext",
     "ArtifactExistsModel",
     "ArtifactExistsResult",
-    "ArtifactReadContext",
-    "ArtifactReadModel",
-    "ArtifactReadResult",
     "ArtifactPublishContext",
     "ArtifactPublishModel",
     "ArtifactPublishResult",
+    "ArtifactReadContext",
+    "ArtifactReadModel",
+    "ArtifactReadResult",
     "ArtifactWriteContext",
     "ArtifactWriteModel",
     "ArtifactWriteResult",
@@ -46,13 +46,13 @@ def _artifact_read(store: Any, key: str) -> bytes:
     return payload.encode() if isinstance(payload, str) else payload
 
 
-def _response_metadata(response: Any) -> Dict[str, Any]:
+def _response_metadata(response: Any) -> dict[str, Any]:
     return response if isinstance(response, dict) else {}
 
 
 class ArtifactExistsContext(ContextBase):
     key: str
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ArtifactExistsResult(ResultBase):
@@ -60,12 +60,12 @@ class ArtifactExistsResult(ResultBase):
     uri: str
     exists: bool
     status: str
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ArtifactReadContext(ContextBase):
     key: str
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ArtifactReadResult(ResultBase):
@@ -73,18 +73,18 @@ class ArtifactReadResult(ResultBase):
     uri: str
     payload: bytes
     status: str
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ArtifactWriteContext(ContextBase):
     key: str
     payload: bytes = b""
-    media_type: Optional[str] = None
-    dataset: Optional[str] = None
+    media_type: str | None = None
+    dataset: str | None = None
     stage: ETLStage = "load"
     overwrite: bool = False
     dry_run: bool = False
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ArtifactWriteResult(ResultBase):
@@ -92,40 +92,40 @@ class ArtifactWriteResult(ResultBase):
     uri: str
     status: str
     artifact: ETLArtifact
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ArtifactPublishContext(ContextBase):
     key: str
-    source_key: Optional[str] = None
-    source_uri: Optional[str] = None
-    media_type: Optional[str] = None
-    dataset: Optional[str] = None
+    source_key: str | None = None
+    source_uri: str | None = None
+    media_type: str | None = None
+    dataset: str | None = None
     stage: ETLStage = "load"
     overwrite: bool = False
     dry_run: bool = False
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ArtifactPublishResult(ResultBase):
     key: str
     uri: str
     status: str
-    source_key: Optional[str] = None
-    source_uri: Optional[str] = None
+    source_key: str | None = None
+    source_uri: str | None = None
     artifact: ETLArtifact
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ArtifactExistsModel(CallableModel):
     store: Any
 
     @property
-    def context_type(self) -> Type[ContextType]:
+    def context_type(self) -> type[ContextType]:
         return ArtifactExistsContext
 
     @property
-    def result_type(self) -> Type[ResultType]:
+    def result_type(self) -> type[ResultType]:
         return ArtifactExistsResult
 
     @Flow.call
@@ -144,11 +144,11 @@ class ArtifactWriteModel(CallableModel):
     store: Any
 
     @property
-    def context_type(self) -> Type[ContextType]:
+    def context_type(self) -> type[ContextType]:
         return ArtifactWriteContext
 
     @property
-    def result_type(self) -> Type[ResultType]:
+    def result_type(self) -> type[ResultType]:
         return ArtifactWriteResult
 
     @Flow.call
@@ -174,11 +174,11 @@ class ArtifactReadModel(CallableModel):
     store: Any
 
     @property
-    def context_type(self) -> Type[ContextType]:
+    def context_type(self) -> type[ContextType]:
         return ArtifactReadContext
 
     @property
-    def result_type(self) -> Type[ResultType]:
+    def result_type(self) -> type[ResultType]:
         return ArtifactReadResult
 
     @Flow.call
@@ -196,11 +196,11 @@ class ArtifactPublishModel(CallableModel):
     store: Any
 
     @property
-    def context_type(self) -> Type[ContextType]:
+    def context_type(self) -> type[ContextType]:
         return ArtifactPublishContext
 
     @property
-    def result_type(self) -> Type[ResultType]:
+    def result_type(self) -> type[ResultType]:
         return ArtifactPublishResult
 
     @Flow.call
@@ -240,13 +240,13 @@ class NoOpArtifactStore(BaseModel):
     def list_keys(self, prefix: str = "") -> list[str]:
         return []
 
-    def write(self, key: str, payload: bytes, media_type: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def write(self, key: str, payload: bytes, media_type: str | None = None, metadata: dict[str, Any] | None = None) -> dict[str, Any]:
         return {"key": key, "media_type": media_type, "status": "noop", **(metadata or {})}
 
-    def write_file(self, key: str, path: Any, media_type: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def write_file(self, key: str, path: Any, media_type: str | None = None, metadata: dict[str, Any] | None = None) -> dict[str, Any]:
         return {"key": key, "path": str(path), "media_type": media_type, "status": "noop", **(metadata or {})}
 
     def publish(
-        self, key: str, source_key: Optional[str] = None, source_uri: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        self, key: str, source_key: str | None = None, source_uri: str | None = None, metadata: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         return {"key": key, "source_key": source_key, "source_uri": source_uri, "status": "noop", **(metadata or {})}

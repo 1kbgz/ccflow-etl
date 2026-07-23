@@ -1,5 +1,3 @@
-from typing import Optional
-
 from ccflow import BaseModel
 from pydantic import Field
 
@@ -7,8 +5,8 @@ __all__ = ("ExecutionPolicy",)
 
 
 class ExecutionPolicy(BaseModel):
-    max_concurrency: Optional[int] = Field(default=None, ge=1)
-    requests_per_interval: Optional[int] = Field(default=None, ge=1)
+    max_concurrency: int | None = Field(default=None, ge=1)
+    requests_per_interval: int | None = Field(default=None, ge=1)
     interval_seconds: float = Field(default=1.0, gt=0.0)
     min_interval_seconds: float = Field(default=0.0, ge=0.0)
 
@@ -21,7 +19,7 @@ class ExecutionPolicy(BaseModel):
         interval_spacing = self.interval_seconds / self.requests_per_interval if self.requests_per_interval else 0.0
         return max(self.min_interval_seconds, interval_spacing)
 
-    def rate_delay_seconds(self, previous_started_at: Optional[float], now: float) -> float:
+    def rate_delay_seconds(self, previous_started_at: float | None, now: float) -> float:
         if previous_started_at is None:
             return 0.0
         delay = previous_started_at + self.spacing_seconds() - now
