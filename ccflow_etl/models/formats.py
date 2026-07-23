@@ -2,7 +2,7 @@ import csv
 import json
 from gzip import compress, decompress
 from io import BytesIO, StringIO
-from typing import Any, Dict, List, Literal, Union
+from typing import Any, Literal
 
 from ccflow import BaseModel
 
@@ -13,14 +13,14 @@ __all__ = (
 )
 
 CacheFormatName = Literal["binary", "text", "json", "csv", "parquet", "gzip"]
-CacheFormat = Union[CacheFormatName, List[CacheFormatName]]
+CacheFormat = CacheFormatName | list[CacheFormatName]
 
 
 class PayloadCodec(BaseModel):
     format: CacheFormat = "json"
 
     @property
-    def formats(self) -> List[CacheFormatName]:
+    def formats(self) -> list[CacheFormatName]:
         return [self.format] if isinstance(self.format, str) else list(self.format)
 
     @property
@@ -94,7 +94,7 @@ class PayloadCodec(BaseModel):
             case _:
                 raise ValueError(f"Unsupported cache format: {self.content_format}")
 
-    def _write_csv(self, payload: dict | List[Dict[str, Any]]) -> bytes:
+    def _write_csv(self, payload: dict | list[dict[str, Any]]) -> bytes:
         rows = payload if isinstance(payload, list) else [payload]
         if not rows:
             return b""

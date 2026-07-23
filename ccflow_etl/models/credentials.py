@@ -1,25 +1,24 @@
 import os
-from typing import Dict, List, Optional
 
 from ccflow import BaseModel
 from pydantic import Field
 
 __all__ = (
+    "APIKeySecretCredentials",
+    "APITokenCredentials",
     "Credentials",
     "NoCredentials",
-    "UsernamePasswordCredentials",
-    "APITokenCredentials",
-    "APIKeySecretCredentials",
     "OAuthCredentials",
+    "UsernamePasswordCredentials",
 )
 
 
-def _env_value(name: Optional[str]) -> Optional[str]:
+def _env_value(name: str | None) -> str | None:
     return os.environ.get(name) if name else None
 
 
 class Credentials(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
     def is_configured(self) -> bool:
         return False
@@ -29,15 +28,15 @@ class NoCredentials(Credentials): ...
 
 
 class UsernamePasswordCredentials(Credentials):
-    username: Optional[str] = None
-    password: Optional[str] = Field(default=None, repr=False)
-    username_env: Optional[str] = None
-    password_env: Optional[str] = None
+    username: str | None = None
+    password: str | None = Field(default=None, repr=False)
+    username_env: str | None = None
+    password_env: str | None = None
 
-    def resolved_username(self) -> Optional[str]:
+    def resolved_username(self) -> str | None:
         return self.username or _env_value(self.username_env)
 
-    def resolved_password(self) -> Optional[str]:
+    def resolved_password(self) -> str | None:
         return self.password or _env_value(self.password_env)
 
     def is_configured(self) -> bool:
@@ -45,11 +44,11 @@ class UsernamePasswordCredentials(Credentials):
 
 
 class APITokenCredentials(Credentials):
-    token: Optional[str] = Field(default=None, repr=False)
-    token_env: Optional[str] = None
+    token: str | None = Field(default=None, repr=False)
+    token_env: str | None = None
     scheme: str = "Bearer"
 
-    def resolved_token(self) -> Optional[str]:
+    def resolved_token(self) -> str | None:
         return self.token or _env_value(self.token_env)
 
     def is_configured(self) -> bool:
@@ -57,15 +56,15 @@ class APITokenCredentials(Credentials):
 
 
 class APIKeySecretCredentials(Credentials):
-    api_key: Optional[str] = Field(default=None, repr=False)
-    secret_key: Optional[str] = Field(default=None, repr=False)
-    api_key_env: Optional[str] = None
-    secret_key_env: Optional[str] = None
+    api_key: str | None = Field(default=None, repr=False)
+    secret_key: str | None = Field(default=None, repr=False)
+    api_key_env: str | None = None
+    secret_key_env: str | None = None
 
-    def resolved_api_key(self) -> Optional[str]:
+    def resolved_api_key(self) -> str | None:
         return self.api_key or _env_value(self.api_key_env)
 
-    def resolved_secret_key(self) -> Optional[str]:
+    def resolved_secret_key(self) -> str | None:
         return self.secret_key or _env_value(self.secret_key_env)
 
     def is_configured(self) -> bool:
@@ -73,20 +72,20 @@ class APIKeySecretCredentials(Credentials):
 
 
 class OAuthCredentials(Credentials):
-    client_id: Optional[str] = None
-    client_secret: Optional[str] = Field(default=None, repr=False)
-    client_id_env: Optional[str] = None
-    client_secret_env: Optional[str] = None
-    token_url: Optional[str] = None
-    access_token: Optional[str] = Field(default=None, repr=False)
-    refresh_token: Optional[str] = Field(default=None, repr=False)
-    scopes: List[str] = Field(default_factory=list)
-    extra: Dict[str, str] = Field(default_factory=dict)
+    client_id: str | None = None
+    client_secret: str | None = Field(default=None, repr=False)
+    client_id_env: str | None = None
+    client_secret_env: str | None = None
+    token_url: str | None = None
+    access_token: str | None = Field(default=None, repr=False)
+    refresh_token: str | None = Field(default=None, repr=False)
+    scopes: list[str] = Field(default_factory=list)
+    extra: dict[str, str] = Field(default_factory=dict)
 
-    def resolved_client_id(self) -> Optional[str]:
+    def resolved_client_id(self) -> str | None:
         return self.client_id or _env_value(self.client_id_env)
 
-    def resolved_client_secret(self) -> Optional[str]:
+    def resolved_client_secret(self) -> str | None:
         return self.client_secret or _env_value(self.client_secret_env)
 
     def is_configured(self) -> bool:

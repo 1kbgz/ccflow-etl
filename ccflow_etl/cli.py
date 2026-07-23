@@ -5,6 +5,7 @@ from pprint import pprint
 import hydra
 from ccflow.utils.hydra import cfg_run, get_args_parser_default_ui, load_config, resolve_config_paths, ui_launcher_default
 from omegaconf import OmegaConf
+from omegaconf.errors import OmegaConfBaseException
 
 __all__ = (
     "explain",
@@ -24,10 +25,7 @@ def _normalize_config_path_argv(argv: list[str]) -> list[str]:
     for index, arg in enumerate(argv):
         if arg in {"--config-path", "-cp"}:
             normalized.append(arg)
-        elif arg.startswith("--config-path="):
-            key, value = arg.split("=", 1)
-            normalized.append(f"{key}={_normalize_config_path(value)}")
-        elif arg.startswith("-cp="):
+        elif arg.startswith(("--config-path=", "-cp=")):
             key, value = arg.split("=", 1)
             normalized.append(f"{key}={_normalize_config_path(value)}")
         elif index > 0 and argv[index - 1] in {"--config-path", "-cp"}:
@@ -52,12 +50,12 @@ def explain():
     )
     try:
         merged_cfg = result.merge()
-    except Exception:
+    except OmegaConfBaseException:
         merged_cfg = OmegaConf.to_container(result.cfg, resolve=True)
 
     if args.no_gui:
         pprint(merged_cfg, width=120, indent=2)
-        return None
+        return
     try:
         ui_launcher_default(merged_cfg, **vars(args))
     except ImportError:

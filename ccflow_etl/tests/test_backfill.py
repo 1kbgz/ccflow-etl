@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from datetime import date
-from typing import ClassVar, Type
+from typing import ClassVar
 
 import pytest
 from ccflow import CallableModel, ContextType, DateContext, Flow, GenericResult, ModelRegistry, ResultType
@@ -89,11 +89,11 @@ def test_backfill_context_resolves_date_utility_registry_reference():
 
 class EchoDateModel(CallableModel):
     @property
-    def context_type(self) -> Type[ContextType]:
+    def context_type(self) -> type[ContextType]:
         return DateContext
 
     @property
-    def result_type(self) -> Type[ResultType]:
+    def result_type(self) -> type[ResultType]:
         return GenericResult
 
     @Flow.call

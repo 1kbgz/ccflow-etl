@@ -1,6 +1,6 @@
 from collections.abc import Mapping, Sequence
 from datetime import datetime
-from typing import ClassVar, Generic, List, Literal, Optional, Tuple, Type, TypeVar, Union
+from typing import ClassVar, Generic, Literal, TypeVar
 
 from ccflow import (
     CallableModel,
@@ -38,7 +38,7 @@ class BackfillContext(DatetimeRangeContext, Generic[C]):
     template: SerializeAsAny[C] = Field(default_factory=GenericContext)
     direction: Literal["forward", "backward"] = "forward"
     interval: Interval = Field(default_factory=lambda: Interval.model_validate("1D"), description="Interval between each backfill step")
-    calendar: Optional[SerializeAsAny[BaseCalendar]] = Field(default=None, description="Calendar that provides backfill steps")
+    calendar: SerializeAsAny[BaseCalendar] | None = Field(default=None, description="Calendar that provides backfill steps")
     calendar_from_default: bool = Field(default=False, exclude=True)
 
     @classmethod
@@ -127,7 +127,7 @@ class BackfillContext(DatetimeRangeContext, Generic[C]):
             v["interval"] = v["calendar"].interval
         return v
 
-    def steps(self, as_array: bool = False) -> Union[List[datetime], NDArray[datetime64]]:
+    def steps(self, as_array: bool = False) -> list[datetime] | NDArray[datetime64]:
         date_range = self.calendar.steps(self.start_datetime, self.end_datetime)
 
         # Adjust for direction
@@ -142,7 +142,7 @@ class BackfillContext(DatetimeRangeContext, Generic[C]):
 
         return date_range
 
-    def step_contexts(self) -> List[C]:
+    def step_contexts(self) -> list[C]:
         return [self.template.model_copy(update={"datetime": step, "dt": step, "date": step.date()}) for step in self.steps(as_array=False)]
 
 
@@ -151,24 +151,24 @@ class BackfillResult(GenericResult): ...
 
 class BackfillModel(CallableModel, Generic[C, R]):
     model: CallableModelGenericType[C, R]
-    interval: Optional[Interval] = None
-    calendar: Optional[SerializeAsAny[BaseCalendar]] = None
+    interval: Interval | None = None
+    calendar: SerializeAsAny[BaseCalendar] | None = None
 
-    _steps: List[ContextType] = PrivateAttr(default_factory=list)
+    _steps: list[ContextType] = PrivateAttr(default_factory=list)
 
     @property
-    def context_type(self) -> Type[ContextType]:
+    def context_type(self) -> type[ContextType]:
         return BackfillContext[self.model.context_type]
 
     @property
-    def result_type(self) -> Type[ResultType]:
+    def result_type(self) -> type[ResultType]:
         return BackfillResult
 
     @model_validator(mode="before")
     @classmethod
     def validate_model(cls, v):
         if not isinstance(v, dict):
-            raise ValueError("model must be a dict representing a CallableModelGenericType")
+            raise TypeError("model must be a dict representing a CallableModelGenericType")
         v = dict(v)
         if isinstance(v.get("interval"), str):
             v["interval"] = Interval.model_validate(v["interval"])
@@ -190,7 +190,7 @@ class BackfillModel(CallableModel, Generic[C, R]):
         return context.model_copy(update={"interval": interval, "calendar": IntervalCalendar(interval=interval)})
 
     @Flow.deps
-    def __deps__(self, context: BackfillContext[C]) -> List[Tuple[CallableModelGenericType[C, R], List[ContextType]]]:
+    def __deps__(self, context: BackfillContext[C]) -> list[tuple[CallableModelGenericType[C, R], list[ContextType]]]:
         context = self._context_with_defaults(context)
         self._steps = context.step_contexts()
         return [(self.model, self._steps)]

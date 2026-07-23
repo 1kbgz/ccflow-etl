@@ -1,6 +1,6 @@
 from pathlib import Path
 from shutil import copyfile
-from typing import Any, Dict, Literal, Optional, Type
+from typing import Any, Literal
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -9,8 +9,8 @@ from ccflow import CallableModel, ContextBase, ContextType, Flow, ResultBase, Re
 from ..formats import CacheFormat, PayloadCodec
 
 __all__ = (
-    "LocalWriteContext",
     "LocalFileOutput",
+    "LocalWriteContext",
     "LocalWriteModel",
     "LocalWriteResult",
     "WriteContext",
@@ -46,11 +46,11 @@ class LocalWriteResult(WriteResult):
 
 class LocalWriteModel(WriteModel):
     @property
-    def context_type(self) -> Type[ContextType]:
+    def context_type(self) -> type[ContextType]:
         return LocalWriteContext
 
     @property
-    def result_type(self) -> Type[ResultType]:
+    def result_type(self) -> type[ResultType]:
         return LocalWriteResult
 
     @Flow.call
@@ -74,11 +74,11 @@ class LocalFileOutput(WriteModel):
     prefix: str = ""
 
     @property
-    def context_type(self) -> Type[ContextType]:
+    def context_type(self) -> type[ContextType]:
         return LocalWriteContext
 
     @property
-    def result_type(self) -> Type[ResultType]:
+    def result_type(self) -> type[ResultType]:
         return LocalWriteResult
 
     @Flow.call
@@ -112,7 +112,7 @@ class LocalFileOutput(WriteModel):
     def read(self, key: str) -> bytes:
         return self.file_path(key).read_bytes()
 
-    def write(self, key: str, payload: bytes, media_type: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def write(self, key: str, payload: bytes, media_type: str | None = None, metadata: dict[str, Any] | None = None) -> dict[str, Any]:
         output_path = self.file_path(key)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         temp_path = output_path.with_name(f".{output_path.name}.{uuid4().hex}.tmp")
@@ -125,8 +125,8 @@ class LocalFileOutput(WriteModel):
         return {"path": str(output_path), "media_type": media_type, "status": "written", **(metadata or {})}
 
     def publish(
-        self, key: str, source_key: Optional[str] = None, source_uri: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        self, key: str, source_key: str | None = None, source_uri: str | None = None, metadata: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         if source_key:
             source_path = self.file_path(source_key)
         elif source_uri:

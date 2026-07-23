@@ -1,13 +1,14 @@
 from calendar import monthrange
+from collections.abc import Callable
 from datetime import date, datetime, time, timedelta
-from typing import Any, Callable, Literal
+from typing import Any, Literal
 
 from ccflow import BaseModel
 from pydantic import model_validator
 
 __all__ = (
-    "Offset",
     "Interval",
+    "Offset",
 )
 
 

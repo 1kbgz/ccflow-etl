@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta
-from typing import Optional
+from datetime import UTC, date, datetime, time, timedelta
 
 from ccflow import BaseModel, ModelRegistry
 from pydantic import Field, SerializeAsAny
@@ -27,7 +26,7 @@ class DateUtility(BaseModel):
 
 
 class LatestSessionDate(DateUtility):
-    calendar: Optional[SerializeAsAny[BaseCalendar]] = None
+    calendar: SerializeAsAny[BaseCalendar] | None = None
     as_of: date | datetime | None = None
     lookback_days: int = Field(default=14, gt=0)
 
@@ -36,7 +35,7 @@ class LatestSessionDate(DateUtility):
         if selected_calendar is None:
             raise ValueError("latest-session requires a selected calendar")
 
-        end = _end_datetime(self.as_of or date.today())
+        end = _end_datetime(self.as_of or datetime.now(UTC).date())
         start = end - timedelta(days=self.lookback_days)
         steps = selected_calendar.steps(start, end)
         if not steps:
@@ -46,7 +45,7 @@ class LatestSessionDate(DateUtility):
 
 class DateUtilityRegistry(ModelRegistry):
     name: str = "dates"
-    calendar: Optional[SerializeAsAny[BaseCalendar]] = None
+    calendar: SerializeAsAny[BaseCalendar] | None = None
     as_of: date | datetime | None = None
     lookback_days: int = Field(default=14, gt=0)
 

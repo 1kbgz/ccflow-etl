@@ -1,5 +1,3 @@
-from typing import Type
-
 from ccflow import CallableModel, ContextType, DateContext, Flow, GenericResult, ResultType
 from ccflow.models import RetryModel as CoreRetryModel
 from ccflow.utils.retry import RetryError, RetryPolicy as CoreRetryPolicy
@@ -18,11 +16,11 @@ class FlakyDateModel(CallableModel):
     failures_before_success: int = 0
 
     @property
-    def context_type(self) -> Type[ContextType]:
+    def context_type(self) -> type[ContextType]:
         return DateContext
 
     @property
-    def result_type(self) -> Type[ResultType]:
+    def result_type(self) -> type[ResultType]:
         return GenericResult
 
     @Flow.call
