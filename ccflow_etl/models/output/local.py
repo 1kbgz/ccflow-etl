@@ -112,6 +112,12 @@ class LocalFileOutput(WriteModel):
     def read(self, key: str) -> bytes:
         return self.file_path(key).read_bytes()
 
+    def read_file(self, key: str, path: str | Path) -> dict[str, Any]:
+        output_path = Path(path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        copyfile(self.file_path(key), output_path)
+        return {"path": str(output_path), "size": output_path.stat().st_size, "status": "materialized"}
+
     def write(self, key: str, payload: bytes, media_type: str | None = None, metadata: dict[str, Any] | None = None) -> dict[str, Any]:
         output_path = self.file_path(key)
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -123,6 +129,25 @@ class LocalFileOutput(WriteModel):
             temp_path.unlink(missing_ok=True)
             raise
         return {"path": str(output_path), "media_type": media_type, "status": "written", **(metadata or {})}
+
+    def write_file(self, key: str, path: str | Path, media_type: str | None = None, metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+        source_path = Path(path)
+        output_path = self.file_path(key)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = output_path.with_name(f".{output_path.name}.{uuid4().hex}.tmp")
+        try:
+            copyfile(source_path, temp_path)
+            temp_path.replace(output_path)
+        except Exception:
+            temp_path.unlink(missing_ok=True)
+            raise
+        return {
+            "path": str(output_path),
+            "size": output_path.stat().st_size,
+            "media_type": media_type,
+            "status": "written",
+            **(metadata or {}),
+        }
 
     def publish(
         self, key: str, source_key: str | None = None, source_uri: str | None = None, metadata: dict[str, Any] | None = None
