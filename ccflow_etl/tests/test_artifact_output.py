@@ -139,12 +139,8 @@ def test_artifact_file_models_skip_io_for_dry_run_and_existing_files(tmp_path):
     planned = ArtifactMaterializeModel(store=store)(
         ArtifactMaterializeContext(key="raw/daily.csv.gz", path=tmp_path / "planned.csv.gz", dry_run=True)
     )
-    existing_materialization = ArtifactMaterializeModel(store=store)(
-        ArtifactMaterializeContext(key="raw/daily.csv.gz", path=local_path)
-    )
-    existing_write = ArtifactWriteFileModel(store=store)(
-        ArtifactWriteFileContext(key="curated/daily.parquet", path=local_path)
-    )
+    existing_materialization = ArtifactMaterializeModel(store=store)(ArtifactMaterializeContext(key="raw/daily.csv.gz", path=local_path))
+    existing_write = ArtifactWriteFileModel(store=store)(ArtifactWriteFileContext(key="curated/daily.parquet", path=local_path))
 
     assert planned.status == "planned"
     assert existing_materialization.status == "exists"
