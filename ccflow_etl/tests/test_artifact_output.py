@@ -141,10 +141,12 @@ def test_artifact_file_models_skip_io_for_dry_run_and_existing_files(tmp_path):
     )
     existing_materialization = ArtifactMaterializeModel(store=store)(ArtifactMaterializeContext(key="raw/daily.csv.gz", path=local_path))
     existing_write = ArtifactWriteFileModel(store=store)(ArtifactWriteFileContext(key="curated/daily.parquet", path=local_path))
+    planned_write = ArtifactWriteFileModel(store=store)(ArtifactWriteFileContext(key="curated/planned.parquet", path=local_path, dry_run=True))
 
     assert planned.status == "planned"
     assert existing_materialization.status == "exists"
     assert existing_write.status == "exists"
+    assert planned_write.status == "planned"
     assert store.file_reads == []
     assert store.file_writes == []
 
@@ -162,6 +164,25 @@ def test_artifact_materialize_cleans_partial_file_on_failure(tmp_path):
 
     assert not target.exists()
     assert list(tmp_path.iterdir()) == []
+
+
+def test_artifact_file_models_require_store_file_contracts(tmp_path):
+    class UnsupportedStore:
+        pass
+
+    class EmptyMaterializationStore:
+        def read_file(self, key, path):
+            return None
+
+    source_path = tmp_path / "source.parquet"
+    source_path.write_bytes(b"parquet")
+
+    with pytest.raises(ValueError, match="file materialization"):
+        ArtifactMaterializeModel(store=UnsupportedStore())(ArtifactMaterializeContext(key="raw/daily.csv.gz", path=tmp_path / "raw.csv.gz"))
+    with pytest.raises(FileNotFoundError, match="did not materialize"):
+        ArtifactMaterializeModel(store=EmptyMaterializationStore())(ArtifactMaterializeContext(key="raw/daily.csv.gz", path=tmp_path / "raw.csv.gz"))
+    with pytest.raises(ValueError, match="file writes"):
+        ArtifactWriteFileModel(store=UnsupportedStore())(ArtifactWriteFileContext(key="curated/daily.parquet", path=source_path))
 
 
 def test_noop_artifact_store_returns_explain_safe_artifacts():
