@@ -1,4 +1,6 @@
+from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from ccflow import BaseModel, CallableModel, ContextBase, ContextType, Flow, ResultBase, ResultType
 from pydantic import Field
@@ -9,6 +11,9 @@ __all__ = (
     "ArtifactExistsContext",
     "ArtifactExistsModel",
     "ArtifactExistsResult",
+    "ArtifactMaterializeContext",
+    "ArtifactMaterializeModel",
+    "ArtifactMaterializeResult",
     "ArtifactPublishContext",
     "ArtifactPublishModel",
     "ArtifactPublishResult",
@@ -16,6 +21,9 @@ __all__ = (
     "ArtifactReadModel",
     "ArtifactReadResult",
     "ArtifactWriteContext",
+    "ArtifactWriteFileContext",
+    "ArtifactWriteFileModel",
+    "ArtifactWriteFileResult",
     "ArtifactWriteModel",
     "ArtifactWriteResult",
     "NoOpArtifactStore",
@@ -76,6 +84,23 @@ class ArtifactReadResult(ResultBase):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class ArtifactMaterializeContext(ContextBase):
+    key: str
+    path: Path
+    overwrite: bool = False
+    dry_run: bool = False
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ArtifactMaterializeResult(ResultBase):
+    key: str
+    uri: str
+    path: str
+    status: str
+    size: int | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
 class ArtifactWriteContext(ContextBase):
     key: str
     payload: bytes = b""
@@ -91,6 +116,27 @@ class ArtifactWriteResult(ResultBase):
     key: str
     uri: str
     status: str
+    artifact: ETLArtifact
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ArtifactWriteFileContext(ContextBase):
+    key: str
+    path: Path
+    media_type: str | None = None
+    dataset: str | None = None
+    stage: ETLStage = "load"
+    overwrite: bool = False
+    dry_run: bool = False
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ArtifactWriteFileResult(ResultBase):
+    key: str
+    uri: str
+    path: str
+    status: str
+    size: int | None = None
     artifact: ETLArtifact
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -189,6 +235,100 @@ class ArtifactReadModel(CallableModel):
             payload=_artifact_read(self.store, context.key),
             status="read",
             metadata=context.metadata,
+        )
+
+
+class ArtifactMaterializeModel(CallableModel):
+    """Materialize an artifact to a local file without loading it into memory."""
+
+    store: Any
+
+    @property
+    def context_type(self) -> type[ContextType]:
+        return ArtifactMaterializeContext
+
+    @property
+    def result_type(self) -> type[ResultType]:
+        return ArtifactMaterializeResult
+
+    @Flow.call
+    def __call__(self, context: ArtifactMaterializeContext) -> ArtifactMaterializeResult:
+        path = context.path
+        uri = _artifact_uri(self.store, context.key)
+        metadata = dict(context.metadata)
+        if context.dry_run:
+            status = "planned"
+        elif path.exists() and not context.overwrite:
+            status = "exists"
+        else:
+            read_file = getattr(self.store, "read_file", None)
+            if read_file is None:
+                raise ValueError("artifact store does not support file materialization")
+            path.parent.mkdir(parents=True, exist_ok=True)
+            temp_path = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
+            try:
+                response = read_file(context.key, temp_path)
+                if not temp_path.is_file():
+                    raise FileNotFoundError(f"artifact store did not materialize {context.key}")
+                temp_path.replace(path)
+            except Exception:
+                temp_path.unlink(missing_ok=True)
+                raise
+            metadata = {**metadata, **_response_metadata(response)}
+            status = str(metadata.pop("status", "materialized"))
+            metadata.pop("path", None)
+            metadata.pop("size", None)
+        size = path.stat().st_size if path.is_file() else None
+        return ArtifactMaterializeResult(key=context.key, uri=uri, path=str(path), status=status, size=size, metadata=metadata)
+
+
+class ArtifactWriteFileModel(CallableModel):
+    """Write a local file to an artifact store without loading it into memory."""
+
+    store: Any
+
+    @property
+    def context_type(self) -> type[ContextType]:
+        return ArtifactWriteFileContext
+
+    @property
+    def result_type(self) -> type[ResultType]:
+        return ArtifactWriteFileResult
+
+    @Flow.call
+    def __call__(self, context: ArtifactWriteFileContext) -> ArtifactWriteFileResult:
+        uri = _artifact_uri(self.store, context.key)
+        metadata = dict(context.metadata)
+        if context.dry_run:
+            status = "planned"
+        elif not context.overwrite and _artifact_exists(self.store, context.key):
+            status = "exists"
+        else:
+            write_file = getattr(self.store, "write_file", None)
+            if write_file is None:
+                raise ValueError("artifact store does not support file writes")
+            response = write_file(context.key, context.path, media_type=context.media_type, metadata=context.metadata)
+            metadata = {**metadata, **_response_metadata(response)}
+            status = str(metadata.pop("status", "written"))
+            metadata.pop("path", None)
+            metadata.pop("size", None)
+        size = context.path.stat().st_size if context.path.is_file() else None
+        artifact = ETLArtifact(
+            key=context.key,
+            stage=context.stage,
+            dataset=context.dataset,
+            uri=uri,
+            media_type=context.media_type,
+            status=status,
+        )
+        return ArtifactWriteFileResult(
+            key=context.key,
+            uri=uri,
+            path=str(context.path),
+            status=status,
+            size=size,
+            artifact=artifact,
+            metadata=metadata,
         )
 
 

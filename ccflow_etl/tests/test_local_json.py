@@ -72,3 +72,40 @@ def test_local_file_output_implements_artifact_store_protocol(tmp_path):
     assert (tmp_path / "extracts" / "sample" / "output.json").read_text() == '{"ok":true}'
     assert output.list_keys("sample") == ["sample/output.json"]
     assert output.list_keys("missing") == []
+
+
+def test_local_file_output_materializes_and_writes_files(tmp_path):
+    output = LocalFileOutput(path=tmp_path / "store")
+    source_path = tmp_path / "source.parquet"
+    materialized_path = tmp_path / "workspace" / "materialized.parquet"
+    source_path.write_bytes(b"parquet-bytes")
+
+    write_result = output.write_file("daily/output.parquet", source_path, media_type="application/vnd.apache.parquet")
+    read_result = output.read_file("daily/output.parquet", materialized_path)
+
+    assert write_result["status"] == "written"
+    assert write_result["size"] == len(b"parquet-bytes")
+    assert read_result["status"] == "materialized"
+    assert read_result["size"] == len(b"parquet-bytes")
+    assert materialized_path.read_bytes() == b"parquet-bytes"
+
+
+def test_local_file_output_cleans_partial_file_when_file_write_fails(tmp_path, monkeypatch):
+    output = LocalFileOutput(path=tmp_path / "store")
+    source_path = tmp_path / "source.parquet"
+    target_path = output.file_path("daily/output.parquet")
+    source_path.write_bytes(b"parquet-bytes")
+    original_replace = Path.replace
+
+    def fail_target_replace(self, target):
+        if Path(target) == target_path:
+            raise OSError("simulated replace failure")
+        return original_replace(self, target)
+
+    monkeypatch.setattr(Path, "replace", fail_target_replace)
+
+    with pytest.raises(OSError, match="simulated replace failure"):
+        output.write_file("daily/output.parquet", source_path)
+
+    assert not target_path.exists()
+    assert not list(target_path.parent.glob(".*.tmp"))
