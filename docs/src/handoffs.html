@@ -257,10 +257,10 @@
 <p><code class="docutils literal notranslate"><span class="pre">ccflow-etl</span></code> owns the format conversion through <code class="docutils literal notranslate"><span class="pre">PayloadCodec</span></code>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ccflow_etl</span><span class="w"> </span><span class="kn">import</span> <span class="n">CacheGetContext</span><span class="p">,</span> <span class="n">CacheGetModel</span><span class="p">,</span> <span class="n">LocalCacheStore</span>
 
-<span class="n">result</span> <span class="o">=</span> <span class="n">CacheGetModel</span><span class="p">(</span><span class="n">store</span><span class="o">=</span><span class="n">LocalCacheStore</span><span class="p">(),</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">)(</span>
-    <span class="n">CacheGetContext</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s2">&quot;./stats.json&quot;</span><span class="p">,</span> <span class="n">dataset</span><span class="o">=</span><span class="s2">&quot;text_stats&quot;</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="s2">&quot;load&quot;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">CacheGetModel</span><span class="p">(</span><span class="n">store</span><span class="o">=</span><span class="n">LocalCacheStore</span><span class="p">(),</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"json"</span><span class="p">)(</span>
+    <span class="n">CacheGetContext</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s2">"./stats.json"</span><span class="p">,</span> <span class="n">dataset</span><span class="o">=</span><span class="s2">"text_stats"</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="s2">"load"</span><span class="p">)</span>
 <span class="p">)</span>
-<span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">&quot;hit&quot;</span><span class="p">:</span>
+<span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">"hit"</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -270,15 +270,15 @@
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ccflow_etl</span><span class="w"> </span><span class="kn">import</span> <span class="n">CacheGetContext</span><span class="p">,</span> <span class="n">CacheGetModel</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">ccflow_s3</span><span class="w"> </span><span class="kn">import</span> <span class="n">S3CacheStore</span><span class="p">,</span> <span class="n">S3Client</span>
 
-<span class="n">store</span> <span class="o">=</span> <span class="n">S3CacheStore</span><span class="p">(</span><span class="n">client</span><span class="o">=</span><span class="n">S3Client</span><span class="p">(),</span> <span class="n">bucket</span><span class="o">=</span><span class="s2">&quot;bucket&quot;</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;cache&quot;</span><span class="p">)</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">CacheGetModel</span><span class="p">(</span><span class="n">store</span><span class="o">=</span><span class="n">store</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">)(</span><span class="n">CacheGetContext</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">&quot;text_stats/2026-05-01&quot;</span><span class="p">))</span>
+<span class="n">store</span> <span class="o">=</span> <span class="n">S3CacheStore</span><span class="p">(</span><span class="n">client</span><span class="o">=</span><span class="n">S3Client</span><span class="p">(),</span> <span class="n">bucket</span><span class="o">=</span><span class="s2">"bucket"</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">"cache"</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">CacheGetModel</span><span class="p">(</span><span class="n">store</span><span class="o">=</span><span class="n">store</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"json"</span><span class="p">)(</span><span class="n">CacheGetContext</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">"text_stats/2026-05-01"</span><span class="p">))</span>
 </pre></div>
 </div>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ccflow_db</span><span class="w"> </span><span class="kn">import</span> <span class="n">SQLiteCacheStore</span><span class="p">,</span> <span class="n">SQLiteConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">ccflow_etl</span><span class="w"> </span><span class="kn">import</span> <span class="n">CacheGetContext</span><span class="p">,</span> <span class="n">CacheGetModel</span>
 
-<span class="n">store</span> <span class="o">=</span> <span class="n">SQLiteCacheStore</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">SQLiteConfig</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s2">&quot;./cache.sqlite&quot;</span><span class="p">),</span> <span class="n">table</span><span class="o">=</span><span class="s2">&quot;cache_entries&quot;</span><span class="p">)</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">CacheGetModel</span><span class="p">(</span><span class="n">store</span><span class="o">=</span><span class="n">store</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">)(</span><span class="n">CacheGetContext</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">&quot;text_stats/2026-05-01&quot;</span><span class="p">))</span>
+<span class="n">store</span> <span class="o">=</span> <span class="n">SQLiteCacheStore</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">SQLiteConfig</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s2">"./cache.sqlite"</span><span class="p">),</span> <span class="n">table</span><span class="o">=</span><span class="s2">"cache_entries"</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">CacheGetModel</span><span class="p">(</span><span class="n">store</span><span class="o">=</span><span class="n">store</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"json"</span><span class="p">)(</span><span class="n">CacheGetContext</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">"text_stats/2026-05-01"</span><span class="p">))</span>
 </pre></div>
 </div>
 <p>Typical unit statuses are:</p>
@@ -294,18 +294,18 @@
 <h2>Dataset Metadata<a class="headerlink" href="#dataset-metadata" title="Link to this heading">¶</a></h2>
 <p>Concrete dataset models should expose their own metadata, such as semantic name, schema version, partition keys, cadence, media types, expectations, provider hints, and output hints. <code class="docutils literal notranslate"><span class="pre">ccflow-etl</span></code> does not add a separate dataset/provider/schema registry; use ccflow registration and Hydra config groups to select the concrete model.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">SampleRecordsModel</span><span class="p">:</span>
-    <span class="n">dataset_name</span> <span class="o">=</span> <span class="s2">&quot;sample_records&quot;</span>
-    <span class="n">provider_name</span> <span class="o">=</span> <span class="s2">&quot;example_provider&quot;</span>
-    <span class="n">schema_name</span> <span class="o">=</span> <span class="s2">&quot;sample_record&quot;</span>
-    <span class="n">schema_version</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span>
-    <span class="n">partition_keys</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="s2">&quot;item_id&quot;</span><span class="p">]</span>
+    <span class="n">dataset_name</span> <span class="o">=</span> <span class="s2">"sample_records"</span>
+    <span class="n">provider_name</span> <span class="o">=</span> <span class="s2">"example_provider"</span>
+    <span class="n">schema_name</span> <span class="o">=</span> <span class="s2">"sample_record"</span>
+    <span class="n">schema_version</span> <span class="o">=</span> <span class="s2">"1"</span>
+    <span class="n">partition_keys</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"date"</span><span class="p">,</span> <span class="s2">"item_id"</span><span class="p">]</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">dataset_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">{</span>
-            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset_name</span><span class="p">,</span>
-            <span class="s2">&quot;schema_name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema_name</span><span class="p">,</span>
-            <span class="s2">&quot;schema_version&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema_version</span><span class="p">,</span>
-            <span class="s2">&quot;partition_keys&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition_keys</span><span class="p">,</span>
+            <span class="s2">"name"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset_name</span><span class="p">,</span>
+            <span class="s2">"schema_name"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema_name</span><span class="p">,</span>
+            <span class="s2">"schema_version"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema_version</span><span class="p">,</span>
+            <span class="s2">"partition_keys"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition_keys</span><span class="p">,</span>
         <span class="p">}</span>
 </pre></div>
 </div>
@@ -325,14 +325,14 @@
 
 <span class="n">result</span> <span class="o">=</span> <span class="n">ArtifactWriteModel</span><span class="p">(</span><span class="n">store</span><span class="o">=</span><span class="n">NoOpArtifactStore</span><span class="p">())(</span>
     <span class="n">ArtifactWriteContext</span><span class="p">(</span>
-        <span class="n">key</span><span class="o">=</span><span class="s2">&quot;outputs/sample-records/2025-01-02.json&quot;</span><span class="p">,</span>
-        <span class="n">payload</span><span class="o">=</span><span class="sa">b</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="p">,</span>
-        <span class="n">media_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span>
-        <span class="n">dataset</span><span class="o">=</span><span class="s2">&quot;sample_records&quot;</span><span class="p">,</span>
+        <span class="n">key</span><span class="o">=</span><span class="s2">"outputs/sample-records/2025-01-02.json"</span><span class="p">,</span>
+        <span class="n">payload</span><span class="o">=</span><span class="sa">b</span><span class="s2">"</span><span class="si">{}</span><span class="s2">"</span><span class="p">,</span>
+        <span class="n">media_type</span><span class="o">=</span><span class="s2">"application/json"</span><span class="p">,</span>
+        <span class="n">dataset</span><span class="o">=</span><span class="s2">"sample_records"</span><span class="p">,</span>
         <span class="n">dry_run</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span>
 <span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">artifact</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">artifact</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"json"</span><span class="p">))</span>
 </pre></div>
 </div>
 </section>
@@ -357,10 +357,10 @@
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ccflow_etl</span><span class="w"> </span><span class="kn">import</span> <span class="n">ETLArtifact</span><span class="p">,</span> <span class="n">RunSummary</span>
 
 <span class="n">summary</span> <span class="o">=</span> <span class="n">RunSummary</span><span class="o">.</span><span class="n">from_items</span><span class="p">(</span>
-    <span class="p">[{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;planned&quot;</span><span class="p">},</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;exists&quot;</span><span class="p">},</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;written&quot;</span><span class="p">}],</span>
-    <span class="n">artifacts</span><span class="o">=</span><span class="p">[</span><span class="n">ETLArtifact</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">&quot;stats&quot;</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="s2">&quot;load&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="s2">&quot;written&quot;</span><span class="p">)],</span>
+    <span class="p">[{</span><span class="s2">"status"</span><span class="p">:</span> <span class="s2">"planned"</span><span class="p">},</span> <span class="p">{</span><span class="s2">"status"</span><span class="p">:</span> <span class="s2">"exists"</span><span class="p">},</span> <span class="p">{</span><span class="s2">"status"</span><span class="p">:</span> <span class="s2">"written"</span><span class="p">}],</span>
+    <span class="n">artifacts</span><span class="o">=</span><span class="p">[</span><span class="n">ETLArtifact</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">"stats"</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="s2">"load"</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="s2">"written"</span><span class="p">)],</span>
 <span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">summary</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">summary</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"json"</span><span class="p">))</span>
 </pre></div>
 </div>
 <p>Use <code class="docutils literal notranslate"><span class="pre">summary.legacy_counts()</span></code> when a caller needs only <code class="docutils literal notranslate"><span class="pre">planned</span></code>, <code class="docutils literal notranslate"><span class="pre">skipped</span></code>, <code class="docutils literal notranslate"><span class="pre">succeeded</span></code>, <code class="docutils literal notranslate"><span class="pre">failed</span></code>, <code class="docutils literal notranslate"><span class="pre">retried</span></code>, and <code class="docutils literal notranslate"><span class="pre">cancelled</span></code> counts.</p>

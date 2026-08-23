@@ -265,7 +265,7 @@
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">TextStatsModel</span><span class="p">(</span><span class="n">CallableModel</span><span class="p">):</span>
-    <span class="n">writer</span><span class="p">:</span> <span class="n">CachePutModel</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">CachePutModel</span><span class="p">(</span><span class="n">store</span><span class="o">=</span><span class="n">LocalCacheStore</span><span class="p">(),</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">))</span>
+    <span class="n">writer</span><span class="p">:</span> <span class="n">CachePutModel</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">CachePutModel</span><span class="p">(</span><span class="n">store</span><span class="o">=</span><span class="n">LocalCacheStore</span><span class="p">(),</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"json"</span><span class="p">))</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">context_type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Type</span><span class="p">[</span><span class="n">ContextType</span><span class="p">]:</span>
@@ -282,37 +282,37 @@
         <span class="n">counts</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">(</span><span class="n">words</span><span class="p">)</span>
         <span class="n">output_path</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">output_path</span>
         <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">date</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">output_path</span> <span class="o">=</span> <span class="n">output_path</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">output_path</span><span class="o">.</span><span class="n">stem</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">context</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span><span class="si">}{</span><span class="n">output_path</span><span class="o">.</span><span class="n">suffix</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">output_path</span> <span class="o">=</span> <span class="n">output_path</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">output_path</span><span class="o">.</span><span class="n">stem</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">context</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span><span class="si">}{</span><span class="n">output_path</span><span class="o">.</span><span class="n">suffix</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;input_path&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">input_path</span><span class="p">),</span>
-            <span class="s2">&quot;date&quot;</span><span class="p">:</span> <span class="n">context</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span> <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">date</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="s2">&quot;word_count&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">words</span><span class="p">),</span>
-            <span class="s2">&quot;unique_words&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">counts</span><span class="p">),</span>
-            <span class="s2">&quot;top_words&quot;</span><span class="p">:</span> <span class="n">counts</span><span class="o">.</span><span class="n">most_common</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span>
+            <span class="s2">"input_path"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">input_path</span><span class="p">),</span>
+            <span class="s2">"date"</span><span class="p">:</span> <span class="n">context</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span> <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">date</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">"word_count"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">words</span><span class="p">),</span>
+            <span class="s2">"unique_words"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">counts</span><span class="p">),</span>
+            <span class="s2">"top_words"</span><span class="p">:</span> <span class="n">counts</span><span class="o">.</span><span class="n">most_common</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span>
         <span class="p">}</span>
 
         <span class="n">write_result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span>
             <span class="n">CachePutContext</span><span class="p">(</span>
                 <span class="n">path</span><span class="o">=</span><span class="n">output_path</span><span class="p">,</span>
                 <span class="n">payload</span><span class="o">=</span><span class="n">payload</span><span class="p">,</span>
-                <span class="n">dataset</span><span class="o">=</span><span class="s2">&quot;text_stats&quot;</span><span class="p">,</span>
-                <span class="n">stage</span><span class="o">=</span><span class="s2">&quot;load&quot;</span><span class="p">,</span>
+                <span class="n">dataset</span><span class="o">=</span><span class="s2">"text_stats"</span><span class="p">,</span>
+                <span class="n">stage</span><span class="o">=</span><span class="s2">"load"</span><span class="p">,</span>
                 <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="p">)</span>
-        <span class="n">summary</span> <span class="o">=</span> <span class="n">RunSummary</span><span class="o">.</span><span class="n">from_items</span><span class="p">([{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="n">write_result</span><span class="o">.</span><span class="n">status</span><span class="p">}],</span> <span class="n">artifacts</span><span class="o">=</span><span class="p">[</span><span class="n">write_result</span><span class="o">.</span><span class="n">artifact</span><span class="p">])</span>
+        <span class="n">summary</span> <span class="o">=</span> <span class="n">RunSummary</span><span class="o">.</span><span class="n">from_items</span><span class="p">([{</span><span class="s2">"status"</span><span class="p">:</span> <span class="n">write_result</span><span class="o">.</span><span class="n">status</span><span class="p">}],</span> <span class="n">artifacts</span><span class="o">=</span><span class="p">[</span><span class="n">write_result</span><span class="o">.</span><span class="n">artifact</span><span class="p">])</span>
 
         <span class="k">return</span> <span class="n">GenericResult</span><span class="p">(</span>
             <span class="n">value</span><span class="o">=</span><span class="p">{</span>
-                <span class="s2">&quot;payload&quot;</span><span class="p">:</span> <span class="n">payload</span><span class="p">,</span>
-                <span class="s2">&quot;artifacts&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">write_result</span><span class="o">.</span><span class="n">artifact</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">)],</span>
-                <span class="s2">&quot;run_summary&quot;</span><span class="p">:</span> <span class="n">summary</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">),</span>
+                <span class="s2">"payload"</span><span class="p">:</span> <span class="n">payload</span><span class="p">,</span>
+                <span class="s2">"artifacts"</span><span class="p">:</span> <span class="p">[</span><span class="n">write_result</span><span class="o">.</span><span class="n">artifact</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"json"</span><span class="p">)],</span>
+                <span class="s2">"run_summary"</span><span class="p">:</span> <span class="n">summary</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"json"</span><span class="p">),</span>
             <span class="p">}</span>
         <span class="p">)</span>
 </pre></div>
 </div>
 <p>Run it through the shared CLI with a matching config:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;small tools make larger workflows easier to trust&#39;</span><span class="w"> </span>&gt;<span class="w"> </span>notes.txt
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">echo</span><span class="w"> </span><span class="s1">'small tools make larger workflows easier to trust'</span><span class="w"> </span>&gt;<span class="w"> </span>notes.txt
 cc-etl<span class="w"> </span>--config-path<span class="w"> </span>./config<span class="w"> </span>--config-name<span class="w"> </span>text_stats<span class="w"> </span>+context.input_path<span class="o">=</span>./notes.txt<span class="w"> </span>+context.output_path<span class="o">=</span>./stats.json
 </pre></div>
 </div>

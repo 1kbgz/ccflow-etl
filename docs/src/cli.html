@@ -249,7 +249,7 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">cc-etl-explain</span></code>: inspect the resolved config without running the callable.</p></li>
 </ul>
 <p>The packaged default config is intentionally small. It writes a local JSON payload with <code class="docutils literal notranslate"><span class="pre">LocalWriteModel(format=&quot;json&quot;)</span></code>:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cc-etl<span class="w"> </span>+context.path<span class="o">=</span>./example-output.json<span class="w"> </span>+context.payload.message<span class="o">=</span><span class="s1">&#39;hello from ccflow-etl&#39;</span><span class="w"> </span>+context.overwrite<span class="o">=</span><span class="nb">true</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cc-etl<span class="w"> </span>+context.path<span class="o">=</span>./example-output.json<span class="w"> </span>+context.payload.message<span class="o">=</span><span class="s1">'hello from ccflow-etl'</span><span class="w"> </span>+context.overwrite<span class="o">=</span><span class="nb">true</span>
 cc-etl-explain<span class="w"> </span>+context.path<span class="o">=</span>./example-output.json
 </pre></div>
 </div>
