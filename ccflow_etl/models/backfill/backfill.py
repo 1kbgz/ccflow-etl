@@ -217,6 +217,10 @@ class BackfillRegistry(ModelRegistry):
     model: str = "/task"
     calendar: str | None = None
 
+    def __contains__(self, item: object) -> bool:
+        normalized = str(item).replace("-", "_")
+        return normalized in {"default", "daily", *self.intervals} or super().__contains__(item)
+
     def __getitem__(self, item) -> BackfillModel:
         normalized = str(item).replace("-", "_")
         if normalized in self.models:

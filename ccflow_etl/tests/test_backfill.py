@@ -127,6 +127,7 @@ def test_backfill_registry_interval_aliases_are_class_overridable():
     root.add("test_task", EchoDateModel(), overwrite=True)
     root.add("custom_backfills", CustomBackfillRegistry(model="/test_task"), overwrite=True)
 
+    assert "/custom_backfills/weekly" in root
     weekly = root["/custom_backfills/weekly"]
 
     assert isinstance(weekly, BackfillModel)
