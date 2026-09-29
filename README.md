@@ -47,7 +47,7 @@ cc-etl --config-path ./config --config-name text_stats +context.input_path=./not
 - Generic extract task composition through `/tasks`, `/datasets`, and `/outputs` config selections.
 - Handoff metadata: `ETLArtifact` for typed stage artifacts.
 - Artifact IO contracts: `ArtifactExistsModel`, `ArtifactWriteModel`, `ArtifactPublishModel`, and `NoOpArtifactStore` for backend-neutral existence checks, writes, publication, and artifact URIs.
-- File artifacts: `ArtifactMaterializeModel` and `ArtifactWriteFileModel` stream artifacts to and from local files. When the store exposes `head()`, materialization records the source object identity, including for an already-cached local file, and re-downloads a cached file whose size no longer matches the source.
+- File artifacts: `ArtifactMaterializeModel` and `ArtifactWriteFileModel` stream artifacts to and from local files. When the store exposes `head()`, materialization saves the source identity next to the downloaded file and reuses a cached file only when that saved identity still matches the source's version ID (or ETag) and size; otherwise it downloads again.
 - Task and output composition: `ExtractTaskModel`, `LocalFileOutput`, `NoOpArtifactStore`, and `/tasks` / `/outputs` config selections.
 - Format-aware writes and cache handoffs: `LocalWriteModel`, `CachePutModel`, `CacheGetModel`, `PayloadCodec`, `LocalCacheStore`, and no-op cache defaults.
 - Retry integration: compatibility exports for `ccflow` `RetryPolicy` and `RetryModel`; use `ccflow.evaluators.RetryEvaluator` for runtime evaluator retries.
