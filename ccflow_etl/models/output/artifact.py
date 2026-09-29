@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -56,6 +57,10 @@ def _artifact_read(store: Any, key: str) -> bytes:
 
 def _response_metadata(response: Any) -> dict[str, Any]:
     return response if isinstance(response, dict) else {}
+
+
+def _identity_fields(response: dict[str, Any]) -> dict[str, Any]:
+    return {name: value for name, value in response.items() if name not in {"path", "status"}}
 
 
 class ArtifactExistsContext(ContextBase):
@@ -251,15 +256,28 @@ class ArtifactMaterializeModel(CallableModel):
     def result_type(self) -> type[ResultType]:
         return ArtifactMaterializeResult
 
+    @staticmethod
+    def _identity_path(path: Path) -> Path:
+        return path.with_name(f".{path.name}.identity.json")
+
     def _cached_identity(self, key: str, path: Path) -> dict[str, Any] | None:
-        """Return the source identity for an existing local file, or None when the store reports a different size."""
+        """Return the source identity for a cached local file, or None when the file must be downloaded again.
+
+        With a store that exposes head(), a cached file is current only when the identity saved at download time matches
+        the source's current version ID (or ETag when unversioned) and size. Stores without head() keep any cached file.
+        """
         head = getattr(self.store, "head", None)
         if head is None:
             return {}
-        identity = _response_metadata(head(key))
-        if identity.get("size") is not None and identity["size"] != path.stat().st_size:
+        identity = _identity_fields(_response_metadata(head(key)))
+        identity_path = self._identity_path(path)
+        saved = json.loads(identity_path.read_text()) if identity_path.is_file() else None
+        if saved is None or identity.get("size") != path.stat().st_size:
             return None
-        return {name: value for name, value in identity.items() if name not in {"path", "size", "status"}}
+        field = "version_id" if identity.get("version_id") and saved.get("version_id") else "etag"
+        if identity.get(field) is None or identity.get(field) != saved.get(field):
+            return None
+        return {name: value for name, value in identity.items() if name != "size"}
 
     @Flow.call
     def __call__(self, context: ArtifactMaterializeContext) -> ArtifactMaterializeResult:
@@ -278,6 +296,8 @@ class ArtifactMaterializeModel(CallableModel):
                 raise ValueError("artifact store does not support file materialization")
             path.parent.mkdir(parents=True, exist_ok=True)
             temp_path = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
+            identity_path = self._identity_path(path)
+            identity_path.unlink(missing_ok=True)
             try:
                 response = read_file(context.key, temp_path)
                 if not temp_path.is_file():
@@ -286,6 +306,9 @@ class ArtifactMaterializeModel(CallableModel):
             except Exception:
                 temp_path.unlink(missing_ok=True)
                 raise
+            identity = _identity_fields(_response_metadata(response))
+            if identity.get("etag") or identity.get("version_id"):
+                identity_path.write_text(json.dumps(identity, sort_keys=True))
             metadata = {**metadata, **_response_metadata(response)}
             status = str(metadata.pop("status", "materialized"))
             metadata.pop("path", None)
