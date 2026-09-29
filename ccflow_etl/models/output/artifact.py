@@ -251,15 +251,27 @@ class ArtifactMaterializeModel(CallableModel):
     def result_type(self) -> type[ResultType]:
         return ArtifactMaterializeResult
 
+    def _cached_identity(self, key: str, path: Path) -> dict[str, Any] | None:
+        """Return the source identity for an existing local file, or None when the store reports a different size."""
+        head = getattr(self.store, "head", None)
+        if head is None:
+            return {}
+        identity = _response_metadata(head(key))
+        if identity.get("size") is not None and identity["size"] != path.stat().st_size:
+            return None
+        return {name: value for name, value in identity.items() if name not in {"path", "size", "status"}}
+
     @Flow.call
     def __call__(self, context: ArtifactMaterializeContext) -> ArtifactMaterializeResult:
         path = context.path
         uri = _artifact_uri(self.store, context.key)
         metadata = dict(context.metadata)
+        cached_identity = self._cached_identity(context.key, path) if not context.dry_run and path.exists() and not context.overwrite else None
         if context.dry_run:
             status = "planned"
-        elif path.exists() and not context.overwrite:
+        elif cached_identity is not None:
             status = "exists"
+            metadata = {**metadata, **cached_identity}
         else:
             read_file = getattr(self.store, "read_file", None)
             if read_file is None:

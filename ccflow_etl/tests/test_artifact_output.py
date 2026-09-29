@@ -151,6 +151,41 @@ def test_artifact_file_models_skip_io_for_dry_run_and_existing_files(tmp_path):
     assert store.file_writes == []
 
 
+class IdentityArtifactStore(RecordingArtifactStore):
+    def __init__(self, size, existing=None):
+        super().__init__(existing=existing)
+        self.size = size
+
+    def head(self, key):
+        return {"object": key, "etag": '"abc123"', "version_id": "v-7", "size": self.size}
+
+
+def test_artifact_materialize_records_source_identity_for_cached_file(tmp_path):
+    local_path = tmp_path / "daily.csv.gz"
+    local_path.write_bytes(b"artifact-file")
+    store = IdentityArtifactStore(size=len(b"artifact-file"), existing={"raw/daily.csv.gz"})
+
+    result = ArtifactMaterializeModel(store=store)(
+        ArtifactMaterializeContext(key="raw/daily.csv.gz", path=local_path, metadata={"dataset": "daily_bars"})
+    )
+
+    assert result.status == "exists"
+    assert result.metadata == {"dataset": "daily_bars", "object": "raw/daily.csv.gz", "etag": '"abc123"', "version_id": "v-7"}
+    assert store.file_reads == []
+
+
+def test_artifact_materialize_refreshes_cached_file_when_source_size_differs(tmp_path):
+    local_path = tmp_path / "daily.csv.gz"
+    local_path.write_bytes(b"stale")
+    store = IdentityArtifactStore(size=len(b"artifact-file"), existing={"raw/daily.csv.gz"})
+
+    result = ArtifactMaterializeModel(store=store)(ArtifactMaterializeContext(key="raw/daily.csv.gz", path=local_path))
+
+    assert result.status == "materialized"
+    assert local_path.read_bytes() == b"artifact-file"
+    assert len(store.file_reads) == 1
+
+
 def test_artifact_materialize_cleans_partial_file_on_failure(tmp_path):
     class FailingStore(RecordingArtifactStore):
         def read_file(self, key, path):
