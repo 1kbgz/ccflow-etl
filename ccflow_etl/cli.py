@@ -3,13 +3,16 @@ from pathlib import Path
 from pprint import pprint
 
 import hydra
-from ccflow.utils.hydra import cfg_run, get_args_parser_default_ui, load_config, resolve_config_paths, ui_launcher_default
+from ccflow import LazyRegistry, ModelRegistry
+from ccflow.utils.hydra import get_args_parser_default_ui, load_config, resolve_config_paths, ui_launcher_default
 from omegaconf import OmegaConf
 from omegaconf.errors import OmegaConfBaseException
 
 __all__ = (
     "explain",
+    "load_registry",
     "main",
+    "run",
 )
 
 
@@ -33,6 +36,35 @@ def _normalize_config_path_argv(argv: list[str]) -> list[str]:
         else:
             normalized.append(arg)
     return normalized
+
+
+def load_registry(cfg, overwrite: bool = True) -> ModelRegistry:
+    """Load a composed config into the root registry, deferring each model until it is first used.
+
+    The config is loaded into a ``LazyRegistry`` and its top-level entries are mounted into the root registry.
+    Nested registries (calendars, backfills, credentials, and so on) stay lazy, so only the models a run touches
+    are instantiated and only the modules they need are imported, while lookups through
+    ``ModelRegistry.root()`` keep working.
+    """
+    container = OmegaConf.to_container(cfg, resolve=True) if OmegaConf.is_config(cfg) else cfg
+    lazy = LazyRegistry()
+    # ccflow accepts plain mappings here but currently annotates only DictConfig.
+    lazy.load_config(cfg=container, overwrite=True)  # ty: ignore[invalid-argument-type]
+    root = ModelRegistry.root()
+    for name in lazy.models:
+        root.add(name, lazy[name], overwrite=overwrite)
+    return root
+
+
+def run(cfg):
+    """Run a composed config like ``ccflow.utils.hydra.cfg_run``, with the registry loaded lazily."""
+    # Staged here until lazy loading moves into ccflow's runner; reuses ccflow's run helpers so behavior matches.
+    from ccflow.utils.hydra import _run_get, _run_model
+
+    if not OmegaConf.is_config(cfg):
+        cfg = OmegaConf.create(cfg)
+    load_registry(cfg)
+    return _run_get(cfg) if "get" in cfg else _run_model(cfg)
 
 
 def explain():
@@ -64,7 +96,7 @@ def explain():
 
 @hydra.main(config_path="config", config_name="base", version_base=None)
 def _main(cfg):
-    return cfg_run(cfg)
+    return run(cfg)
 
 
 def main():
