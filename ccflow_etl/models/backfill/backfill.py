@@ -1,22 +1,20 @@
 from collections.abc import Mapping, Sequence
 from datetime import datetime
-from typing import ClassVar, Generic, Literal, TypeVar
+from typing import ClassVar, Generic, Literal, TypeVar, cast
 
 from ccflow import (
     CallableModel,
     CallableModelGenericType,
     ContextBase,
-    ContextType,
     DatetimeRangeContext,
     Flow,
     GenericContext,
     GenericResult,
     ModelRegistry,
-    NDArray,
     ResultBase,
-    ResultType,
 )
 from numpy import datetime64
+from numpy.typing import NDArray
 from pydantic import Field, PrivateAttr, SerializeAsAny, model_validator
 
 from .calendar import BaseCalendar, IntervalCalendar
@@ -128,6 +126,7 @@ class BackfillContext(DatetimeRangeContext, Generic[C]):
         return v
 
     def steps(self, as_array: bool = False) -> list[datetime] | NDArray[datetime64]:
+        assert self.calendar is not None  # populated by the model validator
         date_range = self.calendar.steps(self.start_datetime, self.end_datetime)
 
         # Adjust for direction
@@ -154,14 +153,14 @@ class BackfillModel(CallableModel, Generic[C, R]):
     interval: Interval | None = None
     calendar: SerializeAsAny[BaseCalendar] | None = None
 
-    _steps: list[ContextType] = PrivateAttr(default_factory=list)
+    _steps: list[C] = PrivateAttr(default_factory=list)
 
     @property
-    def context_type(self) -> type[ContextType]:
-        return BackfillContext[self.model.context_type]
+    def context_type(self) -> type[BackfillContext[C]]:
+        return cast(type[BackfillContext[C]], BackfillContext.__class_getitem__(self.model.context_type))
 
     @property
-    def result_type(self) -> type[ResultType]:
+    def result_type(self) -> type[BackfillResult]:
         return BackfillResult
 
     @model_validator(mode="before")
@@ -190,7 +189,7 @@ class BackfillModel(CallableModel, Generic[C, R]):
         return context.model_copy(update={"interval": interval, "calendar": IntervalCalendar(interval=interval)})
 
     @Flow.deps
-    def __deps__(self, context: BackfillContext[C]) -> list[tuple[CallableModelGenericType[C, R], list[ContextType]]]:
+    def __deps__(self, context: BackfillContext[C]) -> list[tuple[CallableModelGenericType[C, R], list[C]]]:
         context = self._context_with_defaults(context)
         self._steps = context.step_contexts()
         return [(self.model, self._steps)]

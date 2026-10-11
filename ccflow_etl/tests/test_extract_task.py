@@ -1,7 +1,7 @@
 import json
 
 import pyarrow.parquet as pq
-from ccflow import CallableModel, ContextBase, ContextType, Flow, GenericResult, ResultType
+from ccflow import CallableModel, ContextBase, ContextType, Flow, GenericResult
 
 from ccflow_etl import ExtractTaskModel, LocalFileOutput, NoOpArtifactStore
 
@@ -18,7 +18,7 @@ class SampleDataset(CallableModel):
         return GenericResult
 
     @Flow.call
-    def __call__(self, context: ContextType) -> ResultType:
+    def __call__(self, context: ContextType) -> GenericResult:
         extension = "json" if self.return_type == "json" else self.return_type
         return GenericResult(
             value={

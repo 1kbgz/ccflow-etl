@@ -4,7 +4,7 @@ from typing import Any, Literal
 from urllib.parse import urlparse
 from uuid import uuid4
 
-from ccflow import CallableModel, ContextBase, ContextType, Flow, ResultBase, ResultType
+from ccflow import CallableModel, ContextBase, Flow, ResultBase
 
 from ..formats import CacheFormat, PayloadCodec
 
@@ -46,11 +46,11 @@ class LocalWriteResult(WriteResult):
 
 class LocalWriteModel(WriteModel):
     @property
-    def context_type(self) -> type[ContextType]:
+    def context_type(self) -> type[LocalWriteContext]:
         return LocalWriteContext
 
     @property
-    def result_type(self) -> type[ResultType]:
+    def result_type(self) -> type[LocalWriteResult]:
         return LocalWriteResult
 
     @Flow.call
@@ -74,11 +74,11 @@ class LocalFileOutput(WriteModel):
     prefix: str = ""
 
     @property
-    def context_type(self) -> type[ContextType]:
+    def context_type(self) -> type[LocalWriteContext]:
         return LocalWriteContext
 
     @property
-    def result_type(self) -> type[ResultType]:
+    def result_type(self) -> type[LocalWriteResult]:
         return LocalWriteResult
 
     @Flow.call

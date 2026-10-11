@@ -1,7 +1,7 @@
 from json import dumps
 from typing import Any
 
-from ccflow import CallableModel, ContextBase, ContextType, Flow, GenericResult, ResultType
+from ccflow import CallableModel, ContextBase, Flow, GenericResult
 from pydantic import Field
 
 from ..formats import PayloadCodec
@@ -17,11 +17,11 @@ class ExtractTaskModel(CallableModel):
     explain: bool = False
 
     @property
-    def context_type(self) -> type[ContextType]:
+    def context_type(self) -> type[ContextBase]:
         return self.dataset.context_type if hasattr(self.dataset, "context_type") else ContextBase
 
     @property
-    def result_type(self) -> type[ResultType]:
+    def result_type(self) -> type[GenericResult]:
         return GenericResult
 
     def _dataset_for_mode(self) -> Any:
@@ -34,7 +34,7 @@ class ExtractTaskModel(CallableModel):
         return str(getattr(self.dataset, "return_type", None) or getattr(getattr(self.dataset, "dataset", None), "return_type", None) or "json")
 
     def _codec(self, return_type: str) -> PayloadCodec:
-        return PayloadCodec(format=return_type)
+        return PayloadCodec.model_validate({"format": return_type})
 
     def _payload_bytes(self, payload: Any, return_type: str) -> bytes:
         if isinstance(payload, bytes):

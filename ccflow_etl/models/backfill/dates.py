@@ -30,7 +30,7 @@ class LatestSessionDate(DateUtility):
     as_of: date | datetime | None = None
     lookback_days: int = Field(default=14, gt=0)
 
-    def resolve(self, *, calendar: BaseCalendar | str | None = None) -> date | datetime:
+    def resolve(self, *, calendar: BaseCalendar | str | None = None) -> datetime:
         selected_calendar = self.calendar or (BaseCalendar.model_validate(calendar) if calendar is not None else None)
         if selected_calendar is None:
             raise ValueError("latest-session requires a selected calendar")

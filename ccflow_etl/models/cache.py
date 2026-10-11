@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from ccflow import BaseModel, CallableModel, ContextBase, ContextType, Flow, ResultBase, ResultType
+from ccflow import BaseModel, CallableModel, ContextBase, Flow, ResultBase
 
 from .common import ETLArtifact, ETLStage
 from .formats import CacheFormat, PayloadCodec
@@ -100,11 +100,11 @@ class CachePutModel(CallableModel):
         return PayloadCodec(format=self.format)
 
     @property
-    def context_type(self) -> type[ContextType]:
+    def context_type(self) -> type[CachePutContext]:
         return CachePutContext
 
     @property
-    def result_type(self) -> type[ResultType]:
+    def result_type(self) -> type[CachePutResult]:
         return CachePutResult
 
     def resolve_key(self, context: CachePutContext) -> str:
@@ -142,11 +142,11 @@ class CacheGetModel(CallableModel):
         return PayloadCodec(format=self.format)
 
     @property
-    def context_type(self) -> type[ContextType]:
+    def context_type(self) -> type[CacheGetContext]:
         return CacheGetContext
 
     @property
-    def result_type(self) -> type[ResultType]:
+    def result_type(self) -> type[CacheGetResult]:
         return CacheGetResult
 
     def resolve_key(self, context: CacheGetContext) -> str:

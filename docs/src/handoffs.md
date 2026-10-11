@@ -18,9 +18,7 @@ Stores only need a byte-oriented interface:
 ```python
 from ccflow_etl import CacheGetContext, CacheGetModel, LocalCacheStore
 
-result = CacheGetModel(store=LocalCacheStore(), format="json")(
-    CacheGetContext(path="./stats.json", dataset="text_stats", stage="load")
-)
+result = CacheGetModel(store=LocalCacheStore(), format="json")(CacheGetContext(path="./stats.json", dataset="text_stats", stage="load"))
 if result.status == "hit":
     print(result.payload)
 ```
