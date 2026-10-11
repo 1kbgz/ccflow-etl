@@ -1,6 +1,13 @@
 __version__ = "0.3.0"
 
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .config import *
+    from .models import *
+
+
 def __getattr__(name: str) -> object:
     # Submodules are imported on first access so that lerna can locate
     # ccflow_etl.config without importing ccflow

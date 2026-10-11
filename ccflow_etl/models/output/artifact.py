@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from ccflow import BaseModel, CallableModel, ContextBase, ContextType, Flow, ResultBase, ResultType
+from ccflow import BaseModel, CallableModel, ContextBase, Flow, ResultBase
 from pydantic import Field
 
 from ..common import ETLArtifact, ETLStage
@@ -172,11 +172,11 @@ class ArtifactExistsModel(CallableModel):
     store: Any
 
     @property
-    def context_type(self) -> type[ContextType]:
+    def context_type(self) -> type[ArtifactExistsContext]:
         return ArtifactExistsContext
 
     @property
-    def result_type(self) -> type[ResultType]:
+    def result_type(self) -> type[ArtifactExistsResult]:
         return ArtifactExistsResult
 
     @Flow.call
@@ -195,11 +195,11 @@ class ArtifactWriteModel(CallableModel):
     store: Any
 
     @property
-    def context_type(self) -> type[ContextType]:
+    def context_type(self) -> type[ArtifactWriteContext]:
         return ArtifactWriteContext
 
     @property
-    def result_type(self) -> type[ResultType]:
+    def result_type(self) -> type[ArtifactWriteResult]:
         return ArtifactWriteResult
 
     @Flow.call
@@ -225,11 +225,11 @@ class ArtifactReadModel(CallableModel):
     store: Any
 
     @property
-    def context_type(self) -> type[ContextType]:
+    def context_type(self) -> type[ArtifactReadContext]:
         return ArtifactReadContext
 
     @property
-    def result_type(self) -> type[ResultType]:
+    def result_type(self) -> type[ArtifactReadResult]:
         return ArtifactReadResult
 
     @Flow.call
@@ -249,11 +249,11 @@ class ArtifactMaterializeModel(CallableModel):
     store: Any
 
     @property
-    def context_type(self) -> type[ContextType]:
+    def context_type(self) -> type[ArtifactMaterializeContext]:
         return ArtifactMaterializeContext
 
     @property
-    def result_type(self) -> type[ResultType]:
+    def result_type(self) -> type[ArtifactMaterializeResult]:
         return ArtifactMaterializeResult
 
     @staticmethod
@@ -323,11 +323,11 @@ class ArtifactWriteFileModel(CallableModel):
     store: Any
 
     @property
-    def context_type(self) -> type[ContextType]:
+    def context_type(self) -> type[ArtifactWriteFileContext]:
         return ArtifactWriteFileContext
 
     @property
-    def result_type(self) -> type[ResultType]:
+    def result_type(self) -> type[ArtifactWriteFileResult]:
         return ArtifactWriteFileResult
 
     @Flow.call
@@ -371,11 +371,11 @@ class ArtifactPublishModel(CallableModel):
     store: Any
 
     @property
-    def context_type(self) -> type[ContextType]:
+    def context_type(self) -> type[ArtifactPublishContext]:
         return ArtifactPublishContext
 
     @property
-    def result_type(self) -> type[ResultType]:
+    def result_type(self) -> type[ArtifactPublishResult]:
         return ArtifactPublishResult
 
     @Flow.call

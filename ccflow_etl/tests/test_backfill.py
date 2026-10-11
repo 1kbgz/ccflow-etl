@@ -5,7 +5,7 @@ from datetime import date
 from typing import ClassVar
 
 import pytest
-from ccflow import CallableModel, ContextType, DateContext, Flow, GenericResult, ModelRegistry, ResultType
+from ccflow import CallableModel, DateContext, Flow, GenericResult, ModelRegistry
 
 from ccflow_etl import BackfillContext, BackfillModel, BackfillRegistry, DateUtilityRegistry, LatestSessionDate, WeekdayCalendar
 
@@ -89,11 +89,11 @@ def test_backfill_context_resolves_date_utility_registry_reference():
 
 class EchoDateModel(CallableModel):
     @property
-    def context_type(self) -> type[ContextType]:
+    def context_type(self) -> type[DateContext]:
         return DateContext
 
     @property
-    def result_type(self) -> type[ResultType]:
+    def result_type(self) -> type[GenericResult]:
         return GenericResult
 
     @Flow.call

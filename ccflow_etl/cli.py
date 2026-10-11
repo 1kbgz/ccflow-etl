@@ -48,7 +48,8 @@ def load_registry(cfg, overwrite: bool = True) -> ModelRegistry:
     """
     container = OmegaConf.to_container(cfg, resolve=True) if OmegaConf.is_config(cfg) else cfg
     lazy = LazyRegistry()
-    lazy.load_config(cfg=container, overwrite=True)
+    # ccflow accepts plain mappings here but currently annotates only DictConfig.
+    lazy.load_config(cfg=container, overwrite=True)  # ty: ignore[invalid-argument-type]
     root = ModelRegistry.root()
     for name in lazy.models:
         root.add(name, lazy[name], overwrite=overwrite)
