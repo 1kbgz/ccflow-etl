@@ -38,7 +38,7 @@ def _normalize_config_path_argv(argv: list[str]) -> list[str]:
     return normalized
 
 
-def load_registry(cfg) -> ModelRegistry:
+def load_registry(cfg, overwrite: bool = True) -> ModelRegistry:
     """Load a composed config into the root registry, deferring each model until it is first used.
 
     The config is loaded into a ``LazyRegistry`` and its top-level entries are mounted into the root registry.
@@ -51,7 +51,7 @@ def load_registry(cfg) -> ModelRegistry:
     lazy.load_config(cfg=container, overwrite=True)
     root = ModelRegistry.root()
     for name in lazy.models:
-        root.add(name, lazy[name], overwrite=True)
+        root.add(name, lazy[name], overwrite=overwrite)
     return root
 
 
