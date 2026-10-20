@@ -40,6 +40,9 @@ dependencies = [
 ccflow-etl = "pkg:ccflow_etl.config"
 
 [project.optional-dependencies]
+polars = [
+    "polars",
+]
 develop = [
     "build",
     "bump-my-version",
@@ -49,6 +52,7 @@ develop = [
     "mdformat",
     "mdformat-frontmatter",
     "mdformat-tables>=1",
+    "polars",
     "pytest",
     "pytest-cov",
     "ruff",
