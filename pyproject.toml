@@ -52,6 +52,8 @@ develop = [
     "bump-my-version",
     "check-dist",
     "codespell",
+    "fsspec",
+    "fsspec-data>=0.2.4",
     "hatchling",
     "mdformat",
     "mdformat-frontmatter",
