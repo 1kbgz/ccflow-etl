@@ -186,3 +186,56 @@ def test_dataset_resolves_schema_files_by_path_and_package(tmp_path, monkeypatch
     assert by_package.schema.names == ["date", "ticker", "close", "volume"]
     assert by_package.schema == by_path.schema
     assert _dataset(tmp_path).resolved_schema() is None
+
+
+def test_standard_types_replace_64_bit_offset_arrow_types():
+    import pyarrow as pa
+
+    from ccflow_etl.models.dataset import _standard_types
+
+    table = pa.table(
+        {
+            "name": pa.array(["a"], pa.large_string()),
+            "blob": pa.array([b"x"], pa.large_binary()),
+            "tags": pa.array([["t"]], pa.large_list(pa.large_string())),
+            "pairs": pa.array([["p"]], pa.list_(pa.large_string())),
+            "info": pa.array([{"k": "v"}], pa.struct([("k", pa.large_string())])),
+        }
+    )
+
+    standard = _standard_types(table)
+
+    assert standard.schema.types == [pa.string(), pa.binary(), pa.list_(pa.string()), pa.list_(pa.string()), pa.struct([("k", pa.string())])]
+    assert _standard_types(standard) is standard
+
+
+def test_dataset_scan_reads_non_parquet_partitions_from_stores_without_listing(tmp_path):
+    class PlainStore:
+        """A store with only exists, read, and write: no listing and no fsspec URLs."""
+
+        def __init__(self):
+            self.objects = {}
+
+        def artifact_uri(self, key):
+            return f"memory://{key}"
+
+        def exists(self, key):
+            return key in self.objects
+
+        def read(self, key):
+            return self.objects[key]
+
+        def write(self, key, payload, media_type=None, metadata=None):
+            self.objects[key] = payload
+            return {"status": "written"}
+
+    store = PlainStore()
+    dataset = DatasetDefinition(name="events", key_template="raw/events/{date}.jsonl", store=store, format="jsonl")
+    dataset.write_bytes(date(2025, 1, 6), b'{"id": 1}\n{"id": 2}\n')
+    dataset.write_bytes(date(2025, 1, 8), b'{"id": 3, "extra": "x"}\n')
+
+    frame = dataset.scan(date(2025, 1, 6), date(2025, 1, 8)).collect().sort("id")
+
+    assert frame.select("id", "date").rows() == [(1, date(2025, 1, 6)), (2, date(2025, 1, 6)), (3, date(2025, 1, 8))]
+    assert frame["extra"].to_list() == [None, None, "x"]
+    assert LocalFileOutput(path=tmp_path).storage_options() == {} and LocalFileOutput(path=tmp_path).polars_storage_options() == {}
