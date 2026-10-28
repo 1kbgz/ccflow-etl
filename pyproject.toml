@@ -43,6 +43,10 @@ ccflow-etl = "pkg:ccflow_etl.config"
 polars = [
     "polars",
 ]
+fsspec = [
+    "fsspec",
+    "fsspec-data>=0.2.4",
+]
 develop = [
     "build",
     "bump-my-version",

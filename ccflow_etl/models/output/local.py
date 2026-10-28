@@ -97,6 +97,16 @@ class LocalFileOutput(WriteModel):
     def artifact_uri(self, key: str) -> str:
         return self.file_path(key).resolve().as_uri()
 
+    def fsspec_url(self, key: str) -> str:
+        """The artifact's local path, readable by fsspec and Polars without storage options."""
+        return str(self.file_path(key))
+
+    def storage_options(self) -> dict[str, Any]:
+        return {}
+
+    def polars_storage_options(self) -> dict[str, str]:
+        return {}
+
     def exists(self, key: str) -> bool:
         return self.file_path(key).exists()
 
