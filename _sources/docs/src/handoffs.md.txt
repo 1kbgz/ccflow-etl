@@ -53,6 +53,27 @@ Typical unit statuses are:
 - `written` or `upserted`: completed successfully.
 - `failed`, `retried`, or `cancelled`: execution did not finish cleanly.
 
+## Dataset Schemas And Lazy Reads
+
+`DatasetDefinition.scan(start, end)` returns one Polars `LazyFrame` for the partitions between two dates. Each store
+is listed once; partitions come from `local_store` where it holds them and from `store` otherwise. Parquet partitions
+are read from the store's fsspec URL (`fsspec_url(key)`), with the store's `polars_storage_options()` for object
+storage, so filters and column selections reach the files instead of materializing them first.
+
+Set `expected_schema` to declare a partition's Arrow schema. It accepts an fsspec-data reference (a URL, a mapping
+with `url`, `format`, and `storage_options`, or `pkg://package/path` for a file shipped in a package; `.json` files
+are Arrow JSON by default) or an inline mapping with `fields`:
+
+```yaml
+expected_schema: pkg://my_project.config/schemas/bars.v1.json
+schema_policy: compatible
+```
+
+`write_frame` reconciles each frame to the schema under `schema_policy` (`exact`, `projection`, `compatible`, or
+`coerce`) and raises when it does not fit, and the sidecar records which schema was used. With a schema, `scan` reads
+all of a store's partitions in one scan, filling columns that older partitions lack with nulls and taking the
+partition date from the file path where a file has no partition column. Schemas need `pip install ccflow-etl[fsspec]`.
+
 ## Dataset Metadata
 
 Concrete dataset models should expose their own metadata, such as semantic name, schema version, partition keys, cadence, media types, expectations, provider hints, and output hints. `ccflow-etl` does not add a separate dataset/provider/schema registry; use ccflow registration and Hydra config groups to select the concrete model.
