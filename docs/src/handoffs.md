@@ -60,6 +60,10 @@ is listed once; partitions come from `local_store` where it holds them and from 
 are read from the store's fsspec URL (`fsspec_url(key)`), with the store's `polars_storage_options()` for object
 storage, so filters and column selections reach the files instead of materializing them first.
 
+`FsspecArtifactStore(url=..., options=...)` is a store for any fsspec URL, such as `s3://bucket/prefix` or a local
+directory. `options` are the fsspec storage options; for `s3://` URLs the matching Polars options (credentials,
+endpoint, region, anonymous access) are derived from them unless `polars_options` is set.
+
 Set `expected_schema` to declare a partition's Arrow schema. It accepts an fsspec-data reference (a URL, a mapping
 with `url`, `format`, and `storage_options`, or `pkg://package/path` for a file shipped in a package; `.json` files
 are Arrow JSON by default) or an inline mapping with `fields`:
