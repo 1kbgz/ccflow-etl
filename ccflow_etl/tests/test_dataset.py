@@ -239,3 +239,21 @@ def test_dataset_scan_reads_non_parquet_partitions_from_stores_without_listing(t
     assert frame.select("id", "date").rows() == [(1, date(2025, 1, 6)), (2, date(2025, 1, 6)), (3, date(2025, 1, 8))]
     assert frame["extra"].to_list() == [None, None, "x"]
     assert LocalFileOutput(path=tmp_path).storage_options() == {} and LocalFileOutput(path=tmp_path).polars_storage_options() == {}
+
+
+def test_dataset_checks_required_columns_for_nulls_before_applying_the_policy(tmp_path):
+    schema = {
+        "fields": [
+            {"name": "date", "type": "date32", "nullable": False},
+            {"name": "ticker", "type": "string", "nullable": False},
+            {"name": "note", "type": "string"},
+        ]
+    }
+    dataset = _dataset(tmp_path, expected_schema=schema)
+    day = date(2025, 1, 6)
+
+    # Polars declares every column nullable; required columns without nulls are accepted, and all-null optional columns are cast.
+    dataset.write_frame(day, pl.DataFrame({"date": [day], "ticker": ["AAA"], "note": [None]}))
+    assert dataset.read_frame(day).schema["note"] == pl.String
+    with pytest.raises(ValueError, match="column 'ticker' has 1 nulls"):
+        dataset.write_frame(date(2025, 1, 7), pl.DataFrame({"date": [date(2025, 1, 7)] * 2, "ticker": ["AAA", None], "note": ["x", "y"]}))

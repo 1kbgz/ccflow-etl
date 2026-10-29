@@ -59,6 +59,27 @@ def _standard_types(table: Any) -> Any:
     return table if schema == table.schema else table.cast(schema)
 
 
+def _required_columns(table: Any, expected: Any) -> Any:
+    """Mark columns the expected schema requires as non-nullable once they are checked to hold no nulls.
+
+    Frames from Polars and most builders declare every column nullable, which schema policies cannot narrow, so the
+    check happens here: a required column with nulls is an error, and one without becomes non-nullable.
+    """
+    import pyarrow as pa
+
+    fields = []
+    for field in table.schema:
+        index = expected.get_field_index(field.name)
+        if index != -1 and not expected.field(index).nullable and field.nullable:
+            nulls = table.column(field.name).null_count
+            if nulls:
+                raise ValueError(f"column {field.name!r} has {nulls} nulls but the expected schema requires values")
+            field = field.with_nullable(False)
+        fields.append(field)
+    schema = pa.schema(fields, metadata=table.schema.metadata)
+    return table if schema == table.schema else table.cast(schema)
+
+
 def _schema_reference(value: Any) -> Any:
     """An fsspec-data schema reference for a URL string or a reference mapping; ``pkg://package/path`` names a package file.
 
@@ -216,7 +237,7 @@ class DatasetDefinition(BaseModel):
         if resolved is not None:
             from fsspec_data import plan_schema
 
-            table = _standard_types(table)
+            table = _required_columns(_standard_types(table), resolved.schema)
             table = plan_schema(table.schema, resolved.schema, self.schema_policy).apply_table(table)
         if self.schema_name or self.schema_version:
             table = table.replace_schema_metadata(
