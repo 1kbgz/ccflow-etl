@@ -12,7 +12,7 @@ authors = [
 description = "ETL Tools for ccflow"
 readme = "README.md"
 license = { text = "Apache-2.0" }
-version = "0.4.1"
+version = "0.4.2"
 requires-python = ">=3.11"
 keywords = []
 
@@ -77,7 +77,7 @@ Repository = "https://github.com/1kbgz/ccflow-etl"
 Homepage = "https://github.com/1kbgz/ccflow-etl"
 
 [tool.bumpversion]
-current_version = "0.4.1"
+current_version = "0.4.2"
 commit = true
 tag = true
 commit_args = "-s"
