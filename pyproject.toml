@@ -56,7 +56,7 @@ develop = [
     "fsspec-data>=0.2.4",
     "hatchling",
     "mdformat",
-    "mdformat-frontmatter",
+    "mdformat-myst",
     "mdformat-tables>=1",
     "polars",
     "pytest",
