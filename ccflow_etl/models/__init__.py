@@ -4,6 +4,7 @@ from .common import *
 from .credentials import *
 from .dataset import *
 from .formats import *
+from .inventory import *
 from .output import *
 from .retry import *
 from .task import *
