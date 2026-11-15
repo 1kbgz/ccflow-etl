@@ -1,8 +1,8 @@
 import json
 from datetime import date
-from typing import Any
+from typing import Any, Literal
 
-from ccflow import BaseModel, CallableModel, DateRangeContext, Flow, GenericResult
+from ccflow import BaseModel, CallableModel, DateRangeContext, Flow, GraphDepList, ResultBase
 from pydantic import Field
 
 from .dataset import DatasetDefinition, _resolve
@@ -10,7 +10,11 @@ from .output.artifact import _artifact_read, _artifact_uri
 
 __all__ = (
     "DatasetInventory",
+    "DatasetInventoryPlan",
+    "DatasetInventoryResult",
+    "DatasetPartitionSources",
     "DatasetPlanModel",
+    "DatasetPlanResult",
 )
 
 
@@ -36,22 +40,59 @@ def _recorded_sources(value: Any) -> list[dict[str, Any]]:
     return []
 
 
-def _ranges(dates: list[date], selected: set[date]) -> list[list[str]]:
-    """Runs of ``selected`` dates that are consecutive in ``dates``, as ``[start, end]`` ISO pairs."""
-    ranges: list[list[str]] = []
+def _ranges(dates: list[date], selected: set[date]) -> list[DateRangeContext]:
+    """Runs of ``selected`` dates that are consecutive in ``dates``."""
+    ranges: list[DateRangeContext] = []
     current: list[date] | None = None
     for value in dates:
         if value in selected:
             current = [value, value] if current is None else [current[0], value]
         elif current is not None:
-            ranges.append([current[0].isoformat(), current[1].isoformat()])
+            ranges.append(DateRangeContext(start_date=current[0], end_date=current[1]))
             current = None
     if current is not None:
-        ranges.append([current[0].isoformat(), current[1].isoformat()])
+        ranges.append(DateRangeContext(start_date=current[0], end_date=current[1]))
     return ranges
 
 
-class DatasetInventory(BaseModel):
+class DatasetPartitionSources(BaseModel):
+    """Source object URIs recorded by one partition's sidecar."""
+
+    date: date
+    sources: list[str]
+
+
+class DatasetInventoryPlan(BaseModel):
+    """What an inventory would list: its expected partitions and the store prefixes it reads."""
+
+    name: str
+    expected_count: int
+    prefix: str
+    sources: list[str]
+
+
+class DatasetInventoryResult(ResultBase):
+    """Missing, sidecar-missing and stale partitions of one dataset, and the date ranges to rebuild."""
+
+    name: str
+    expected_count: int
+    present_count: int
+    missing_count: int
+    missing_ranges: list[DateRangeContext]
+    sidecar_missing_count: int
+    sidecar_missing_ranges: list[DateRangeContext]
+    stale_count: int
+    stale_ranges: list[DateRangeContext]
+    stale: list[DatasetPartitionSources] = Field(description="Stale partitions and their changed sources, up to ``max_listed``.")
+    source_missing_count: int
+    source_missing: list[DatasetPartitionSources] = Field(description="Partitions whose recorded sources are gone, up to ``max_listed``.")
+    unverified_count: int
+    rebuild: list[DateRangeContext] = Field(
+        description="Ranges covering missing, sidecar-missing and stale partitions, as contexts for the producing task."
+    )
+
+
+class DatasetInventory(CallableModel):
     """Which of a dataset's expected partitions are missing, and which are stale because a source changed after they were built.
 
     A partition is stale when its lineage sidecar records a source object (any mapping with ``uri`` and ``etag``)
@@ -72,19 +113,28 @@ class DatasetInventory(BaseModel):
         description="Check only the last expected partition in the range, for datasets whose partitions are snapshots that supersede earlier ones.",
     )
     require_sidecars: bool = Field(default=False, description="Treat a present partition without its lineage sidecar as needing a rebuild.")
+    max_listed: int = Field(default=20, ge=0, description="Stale and source-missing partitions listed in the result.")
+
+    @property
+    def context_type(self) -> type[DateRangeContext]:
+        return DateRangeContext
+
+    @property
+    def result_type(self) -> type[DatasetInventoryResult]:
+        return DatasetInventoryResult
 
     def _dates(self, start: date, end: date) -> list[date]:
         dates = self.dataset.partitions(start, end)
         return dates[-1:] if self.latest_only else dates
 
-    def plan(self, start: date, end: date) -> dict[str, Any]:
-        """Explain record: the expected partitions and the listings an inventory would make, without reading anything."""
-        return {
-            "name": self.dataset.name,
-            "expected_count": len(self._dates(start, end)),
-            "prefix": _artifact_uri(_resolve(self.dataset.store), _prefix(self.dataset)),
-            "sources": [_artifact_uri(_resolve(source.store), _prefix(source)) for source in self.sources],
-        }
+    def plan(self, context: DateRangeContext) -> DatasetInventoryPlan:
+        """The expected partitions and the listings an inventory would make, without reading anything."""
+        return DatasetInventoryPlan(
+            name=self.dataset.name,
+            expected_count=len(self._dates(context.start_date, context.end_date)),
+            prefix=_artifact_uri(_resolve(self.dataset.store), _prefix(self.dataset)),
+            sources=[_artifact_uri(_resolve(source.store), _prefix(source)) for source in self.sources],
+        )
 
     def _current_sources(self) -> tuple[dict[str, dict[str, Any]], list[str]]:
         """Current identity by URI for every listed source object, and the URI prefix of each source."""
@@ -104,9 +154,10 @@ class DatasetInventory(BaseModel):
             return json.loads(_artifact_read(_resolve(self.dataset.store), key))
         return {}
 
-    def inventory(self, start: date, end: date) -> dict[str, Any]:
+    @Flow.call
+    def __call__(self, context: DateRangeContext) -> DatasetInventoryResult:
         dataset = self.dataset
-        dates = self._dates(start, end)
+        dates = self._dates(context.start_date, context.end_date)
         prefix = _prefix(dataset)
         stored = set(_listing(_resolve(dataset.store), prefix))
         local_keys = set(_listing(_resolve(dataset.local_store), prefix)) if dataset.local_store is not None else set()
@@ -136,68 +187,73 @@ class DatasetInventory(BaseModel):
         else:
             unverified = len(present)
 
-        rebuild = missing | sidecar_missing | set(stale)
-        return {
-            "name": dataset.name,
-            "expected_count": len(dates),
-            "present_count": len(present),
-            "missing_count": len(missing),
-            "missing_ranges": _ranges(dates, missing),
-            "sidecar_missing_count": len(sidecar_missing),
-            "sidecar_missing_ranges": _ranges(dates, sidecar_missing),
-            "stale_count": len(stale),
-            "stale_ranges": _ranges(dates, set(stale)),
-            "stale": [{"date": value.isoformat(), "sources": stale[value]} for value in dates if value in stale],
-            "source_missing_count": len(source_missing),
-            "source_missing": [{"date": value.isoformat(), "sources": source_missing[value]} for value in dates if value in source_missing],
-            "unverified_count": unverified,
-            "rebuild": [{"start_date": first, "end_date": last} for first, last in _ranges(dates, rebuild)],
-        }
+        return DatasetInventoryResult(
+            name=dataset.name,
+            expected_count=len(dates),
+            present_count=len(present),
+            missing_count=len(missing),
+            missing_ranges=_ranges(dates, missing),
+            sidecar_missing_count=len(sidecar_missing),
+            sidecar_missing_ranges=_ranges(dates, sidecar_missing),
+            stale_count=len(stale),
+            stale_ranges=_ranges(dates, set(stale)),
+            stale=[DatasetPartitionSources(date=value, sources=stale[value]) for value in dates if value in stale][: self.max_listed],
+            source_missing_count=len(source_missing),
+            source_missing=[DatasetPartitionSources(date=value, sources=source_missing[value]) for value in dates if value in source_missing][
+                : self.max_listed
+            ],
+            unverified_count=unverified,
+            rebuild=_ranges(dates, missing | sidecar_missing | set(stale)),
+        )
+
+
+class DatasetPlanResult(ResultBase):
+    """Per-dataset inventories over a date range, or in explain mode what each inventory would list."""
+
+    start_date: date
+    end_date: date
+    status: Literal["planned", "current"]
+    datasets: list[DatasetInventoryResult] = Field(default_factory=list)
+    explained: list[DatasetInventoryPlan] = Field(default_factory=list, description="Explain mode only.")
 
 
 class DatasetPlanModel(CallableModel):
     """Plan which partitions of each dataset need building: missing ones, ones missing a required sidecar, and ones whose sources changed.
 
-    The result lists, per dataset, missing and stale date ranges and ``rebuild`` contexts (``start_date`` and
-    ``end_date``) covering both, for the dataset's producing task to run. Nothing is built or written. Explain mode
-    reports the expected partitions without listing or reading any store.
+    Each dataset's ``DatasetInventory`` is a dependency evaluated over the same range. The result lists their missing
+    and stale date ranges and ``rebuild`` contexts covering both, for each dataset's producing task to run. Nothing is
+    built or written. Explain mode reports the expected partitions without listing or reading any store.
     """
 
     datasets: list[DatasetInventory] = Field(default_factory=list)
     explain: bool = False
     fail_on_missing: bool = False
     fail_on_stale: bool = False
-    max_listed: int = Field(default=20, ge=0, description="Stale and source-missing partitions listed per dataset.")
 
     @property
     def context_type(self) -> type[DateRangeContext]:
         return DateRangeContext
 
     @property
-    def result_type(self) -> type[GenericResult]:
-        return GenericResult
+    def result_type(self) -> type[DatasetPlanResult]:
+        return DatasetPlanResult
+
+    @Flow.deps
+    def __deps__(self, context: DateRangeContext) -> GraphDepList:
+        return [] if self.explain else [(item, [context]) for item in self.datasets]
 
     @Flow.call
-    def __call__(self, context: DateRangeContext) -> GenericResult:
-        window = {"start_date": context.start_date.isoformat(), "end_date": context.end_date.isoformat()}
+    def __call__(self, context: DateRangeContext) -> DatasetPlanResult:
+        start, end = context.start_date, context.end_date
         if self.explain:
-            return GenericResult(
-                value={**window, "status": "planned", "datasets": [item.plan(context.start_date, context.end_date) for item in self.datasets]}
-            )
-        results = []
-        for item in self.datasets:
-            result = item.inventory(context.start_date, context.end_date)
-            result["stale"] = result["stale"][: self.max_listed]
-            result["source_missing"] = result["source_missing"][: self.max_listed]
-            results.append(result)
+            return DatasetPlanResult(start_date=start, end_date=end, status="planned", explained=[item.plan(context) for item in self.datasets])
+        results = [item(context) for item in self.datasets]
         failures = [
-            f"{result['name']}: {result['missing_count']} missing, {result['sidecar_missing_count']} without sidecars, {result['stale_count']} stale"
+            f"{result.name}: {result.missing_count} missing, {result.sidecar_missing_count} without sidecars, {result.stale_count} stale"
             for result in results
-            if (self.fail_on_missing and (result["missing_count"] or result["sidecar_missing_count"]))
-            or (self.fail_on_stale and result["stale_count"])
+            if (self.fail_on_missing and (result.missing_count or result.sidecar_missing_count)) or (self.fail_on_stale and result.stale_count)
         ]
         if failures:
-            raise RuntimeError(f"dataset plan {window['start_date']} to {window['end_date']} found partitions to rebuild: {'; '.join(failures)}")
-        return GenericResult(
-            value={**window, "status": "planned" if any(result["rebuild"] for result in results) else "current", "datasets": results}
-        )
+            raise RuntimeError(f"dataset plan {start} to {end} found partitions to rebuild: {'; '.join(failures)}")
+        status = "planned" if any(result.rebuild for result in results) else "current"
+        return DatasetPlanResult(start_date=start, end_date=end, status=status, datasets=results)

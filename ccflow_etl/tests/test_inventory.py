@@ -5,8 +5,9 @@ from hashlib import md5
 
 import polars as pl
 import pytest
+from ccflow import DateRangeContext
 
-from ccflow_etl import DatasetDefinition, DatasetInventory, DatasetPlanModel, LocalFileOutput, WeekdayCalendar
+from ccflow_etl import DatasetDefinition, DatasetInventory, DatasetPartitionSources, DatasetPlanModel, LocalFileOutput, WeekdayCalendar
 
 
 class ETagStore(LocalFileOutput):
@@ -14,6 +15,10 @@ class ETagStore(LocalFileOutput):
 
     def list_objects(self, prefix: str = "") -> dict[str, dict]:
         return {key: {"etag": f'"{md5(self.read(key)).hexdigest()}"'} for key in self.list_keys(prefix)}
+
+
+def _window(start: date | str, end: date | str) -> DateRangeContext:
+    return DateRangeContext(start_date=start, end_date=end)
 
 
 DAYS = [date(2025, 1, 6), date(2025, 1, 7), date(2025, 1, 8), date(2025, 1, 9), date(2025, 1, 10)]
@@ -50,16 +55,16 @@ def test_inventory_reports_missing_stale_and_current_partitions(stores):
     # The source for the second day is republished after its partition was built.
     raw_store.write(raw.key(DAYS[1]), b"close\n99\n")
 
-    result = DatasetInventory(dataset=curated, sources=[raw]).inventory(DAYS[0], DAYS[-1])
+    result = DatasetInventory(dataset=curated, sources=[raw])(_window(DAYS[0], DAYS[-1]))
 
-    assert result["expected_count"] == 5 and result["present_count"] == 3
-    assert result["missing_ranges"] == [["2025-01-09", "2025-01-10"]]
-    assert result["stale_ranges"] == [["2025-01-07", "2025-01-07"]]
-    assert result["stale"] == [{"date": "2025-01-07", "sources": [raw.uri(DAYS[1])]}]
-    assert result["unverified_count"] == 0 and result["source_missing_count"] == 0
-    assert result["rebuild"] == [
-        {"start_date": "2025-01-07", "end_date": "2025-01-07"},
-        {"start_date": "2025-01-09", "end_date": "2025-01-10"},
+    assert result.expected_count == 5 and result.present_count == 3
+    assert result.missing_ranges == [_window("2025-01-09", "2025-01-10")]
+    assert result.stale_ranges == [_window("2025-01-07", "2025-01-07")]
+    assert result.stale == [DatasetPartitionSources(date=DAYS[1], sources=[raw.uri(DAYS[1])])]
+    assert result.unverified_count == 0 and result.source_missing_count == 0
+    assert result.rebuild == [
+        _window("2025-01-07", "2025-01-07"),
+        _window("2025-01-09", "2025-01-10"),
     ]
 
 
@@ -73,9 +78,9 @@ def test_inventory_finds_nested_sources_and_reads_sidecars_from_local_store(stor
     (tmp_path / "curated" / curated.sidecar_key(DAYS[0])).unlink()
     raw_store.write(raw.key(DAYS[0]), b"close\n2\n")
 
-    result = DatasetInventory(dataset=curated, sources=[raw]).inventory(DAYS[0], DAYS[0])
+    result = DatasetInventory(dataset=curated, sources=[raw])(_window(DAYS[0], DAYS[0]))
 
-    assert result["stale_count"] == 1 and result["missing_count"] == 0
+    assert result.stale_count == 1 and result.missing_count == 0
 
 
 def test_inventory_reports_deleted_sources_without_planning_a_rebuild(stores):
@@ -85,10 +90,10 @@ def test_inventory_reports_deleted_sources_without_planning_a_rebuild(stores):
     _build(raw, curated, DAYS[0])
     raw_store.file_path(raw.key(DAYS[0])).unlink()
 
-    result = DatasetInventory(dataset=curated, sources=[raw]).inventory(DAYS[0], DAYS[0])
+    result = DatasetInventory(dataset=curated, sources=[raw])(_window(DAYS[0], DAYS[0]))
 
-    assert result["source_missing"] == [{"date": "2025-01-06", "sources": [raw.uri(DAYS[0])]}]
-    assert result["stale_count"] == 0 and result["rebuild"] == []
+    assert result.source_missing == [DatasetPartitionSources(date=DAYS[0], sources=[raw.uri(DAYS[0])])]
+    assert result.stale_count == 0 and result.rebuild == []
 
 
 def test_inventory_counts_partitions_it_cannot_verify(stores, tmp_path):
@@ -102,9 +107,9 @@ def test_inventory_counts_partitions_it_cannot_verify(stores, tmp_path):
     curated_store.file_path(curated.sidecar_key(DAYS[1])).unlink()
     plain = _raw(LocalFileOutput(path=tmp_path / "raw"))
 
-    assert DatasetInventory(dataset=curated, sources=[raw]).inventory(DAYS[0], DAYS[1])["unverified_count"] == 1
-    assert DatasetInventory(dataset=curated, sources=[plain]).inventory(DAYS[0], DAYS[1])["unverified_count"] == 2
-    assert DatasetInventory(dataset=curated).inventory(DAYS[0], DAYS[1])["unverified_count"] == 2
+    assert DatasetInventory(dataset=curated, sources=[raw])(_window(DAYS[0], DAYS[1])).unverified_count == 1
+    assert DatasetInventory(dataset=curated, sources=[plain])(_window(DAYS[0], DAYS[1])).unverified_count == 2
+    assert DatasetInventory(dataset=curated)(_window(DAYS[0], DAYS[1])).unverified_count == 2
 
 
 def test_inventory_checks_only_the_latest_snapshot_when_asked(stores):
@@ -119,10 +124,10 @@ def test_inventory_checks_only_the_latest_snapshot_when_asked(stores):
 
     latest = DatasetInventory(dataset=curated, sources=[raw], latest_only=True)
 
-    assert latest.plan(DAYS[0], DAYS[-1])["expected_count"] == 1
-    result = latest.inventory(DAYS[0], DAYS[-1])
-    assert (result["expected_count"], result["missing_count"], result["stale_count"], result["rebuild"]) == (1, 0, 0, [])
-    assert latest.inventory(DAYS[0], DAYS[-2])["rebuild"] == [{"start_date": "2025-01-09", "end_date": "2025-01-09"}]
+    assert latest.plan(_window(DAYS[0], DAYS[-1])).expected_count == 1
+    result = latest(_window(DAYS[0], DAYS[-1]))
+    assert (result.expected_count, result.missing_count, result.stale_count, result.rebuild) == (1, 0, 0, [])
+    assert latest(_window(DAYS[0], DAYS[-2])).rebuild == [_window("2025-01-09", "2025-01-09")]
 
 
 def test_inventory_plans_partitions_without_required_sidecars(stores, tmp_path):
@@ -137,11 +142,11 @@ def test_inventory_plans_partitions_without_required_sidecars(stores, tmp_path):
     curated_store.file_path(curated.sidecar_key(DAYS[1])).unlink()
     (tmp_path / "local" / curated.sidecar_key(DAYS[1])).unlink()
 
-    required = DatasetInventory(dataset=curated, require_sidecars=True).inventory(DAYS[0], DAYS[2])
+    required = DatasetInventory(dataset=curated, require_sidecars=True)(_window(DAYS[0], DAYS[2]))
 
-    assert required["sidecar_missing_count"] == 1 and required["sidecar_missing_ranges"] == [["2025-01-07", "2025-01-07"]]
-    assert required["rebuild"] == [{"start_date": "2025-01-07", "end_date": "2025-01-07"}]
-    assert DatasetInventory(dataset=curated).inventory(DAYS[0], DAYS[2])["sidecar_missing_count"] == 0
+    assert required.sidecar_missing_count == 1 and required.sidecar_missing_ranges == [_window("2025-01-07", "2025-01-07")]
+    assert required.rebuild == [_window("2025-01-07", "2025-01-07")]
+    assert DatasetInventory(dataset=curated)(_window(DAYS[0], DAYS[2])).sidecar_missing_count == 0
     with pytest.raises(RuntimeError, match="bars: 0 missing, 1 without sidecars, 0 stale"):
         DatasetPlanModel(datasets=[DatasetInventory(dataset=curated, require_sidecars=True)], fail_on_missing=True)(
             {"start_date": DAYS[0], "end_date": DAYS[2]}
@@ -152,14 +157,15 @@ def test_plan_model_explains_without_reading_and_fails_when_asked(stores):
     raw_store, curated_store = stores
     raw, curated = _raw(raw_store), _curated(curated_store)
     inventory = DatasetInventory(dataset=curated, sources=[raw])
-    context = {"start_date": DAYS[0], "end_date": DAYS[-1]}
+    context = _window(DAYS[0], DAYS[-1])
 
-    explained = DatasetPlanModel(datasets=[inventory], explain=True)(context).value
-    planned = DatasetPlanModel(datasets=[inventory])(context).value
+    explained = DatasetPlanModel(datasets=[inventory], explain=True)(context)
+    planned = DatasetPlanModel(datasets=[inventory])(context)
 
-    assert explained["status"] == "planned" and explained["datasets"][0]["expected_count"] == 5
-    assert "missing_count" not in explained["datasets"][0]
-    assert planned["status"] == "planned" and planned["datasets"][0]["rebuild"] == [{"start_date": "2025-01-06", "end_date": "2025-01-10"}]
+    assert explained.status == "planned" and explained.explained[0].expected_count == 5 and explained.datasets == []
+    assert DatasetPlanModel(datasets=[inventory]).__deps__(context) == [(inventory, [context])]
+    assert DatasetPlanModel(datasets=[inventory], explain=True).__deps__(context) == []
+    assert planned.status == "planned" and planned.datasets[0].rebuild == [_window("2025-01-06", "2025-01-10")]
     with pytest.raises(RuntimeError, match="bars: 5 missing, 0 without sidecars, 0 stale"):
         DatasetPlanModel(datasets=[inventory], fail_on_missing=True)(context)
-    assert DatasetPlanModel(datasets=[inventory], fail_on_stale=True)(context).value["status"] == "planned"
+    assert DatasetPlanModel(datasets=[inventory], fail_on_stale=True)(context).status == "planned"
