@@ -5,8 +5,8 @@ from typing import Any, Literal
 from ccflow import BaseModel, CallableModel, DateRangeContext, Flow, GraphDepList, ResultBase
 from pydantic import Field
 
-from .dataset import DatasetDefinition, _resolve
-from .output.artifact import _artifact_read, _artifact_uri
+from .dataset import DatasetDefinition
+from .output.artifact import _artifact_read, artifact_uri
 
 __all__ = (
     "DatasetInventory",
@@ -16,10 +16,6 @@ __all__ = (
     "DatasetPlanModel",
     "DatasetPlanResult",
 )
-
-
-def _prefix(dataset: DatasetDefinition) -> str:
-    return dataset.key_template.split("{", 1)[0]
 
 
 def _listing(store: Any, prefix: str) -> dict[str, dict[str, Any]]:
@@ -132,8 +128,8 @@ class DatasetInventory(CallableModel):
         return DatasetInventoryPlan(
             name=self.dataset.name,
             expected_count=len(self._dates(context.start_date, context.end_date)),
-            prefix=_artifact_uri(_resolve(self.dataset.store), _prefix(self.dataset)),
-            sources=[_artifact_uri(_resolve(source.store), _prefix(source)) for source in self.sources],
+            prefix=artifact_uri(self.dataset.resolved_store(), self.dataset.key_prefix),
+            sources=[artifact_uri(source.resolved_store(), source.key_prefix) for source in self.sources],
         )
 
     def _current_sources(self) -> tuple[dict[str, dict[str, Any]], list[str]]:
@@ -141,26 +137,26 @@ class DatasetInventory(CallableModel):
         current: dict[str, dict[str, Any]] = {}
         prefixes = []
         for source in self.sources:
-            store, prefix = _resolve(source.store), _prefix(source)
-            prefixes.append(_artifact_uri(store, prefix))
-            current.update({_artifact_uri(store, key): identity for key, identity in _listing(store, prefix).items()})
+            store, prefix = source.resolved_store(), source.key_prefix
+            prefixes.append(artifact_uri(store, prefix))
+            current.update({artifact_uri(store, key): identity for key, identity in _listing(store, prefix).items()})
         return current, prefixes
 
     def _sidecar(self, value: date, stored: set[str], local_keys: set[str]) -> dict[str, Any]:
         key = self.dataset.sidecar_key(value)
         if key in local_keys:
-            return json.loads(_artifact_read(_resolve(self.dataset.local_store), key))
+            return json.loads(_artifact_read(self.dataset.resolved_local_store(), key))
         if key in stored:
-            return json.loads(_artifact_read(_resolve(self.dataset.store), key))
+            return json.loads(_artifact_read(self.dataset.resolved_store(), key))
         return {}
 
     @Flow.call
     def __call__(self, context: DateRangeContext) -> DatasetInventoryResult:
         dataset = self.dataset
         dates = self._dates(context.start_date, context.end_date)
-        prefix = _prefix(dataset)
-        stored = set(_listing(_resolve(dataset.store), prefix))
-        local_keys = set(_listing(_resolve(dataset.local_store), prefix)) if dataset.local_store is not None else set()
+        prefix = dataset.key_prefix
+        stored = set(_listing(dataset.resolved_store(), prefix))
+        local_keys = set(_listing(dataset.resolved_local_store(), prefix)) if dataset.local_store is not None else set()
         missing = {value for value in dates if dataset.key(value) not in stored}
         present = [value for value in dates if value not in missing]
         sidecars = stored | local_keys

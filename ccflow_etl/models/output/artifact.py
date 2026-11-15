@@ -28,10 +28,12 @@ __all__ = (
     "ArtifactWriteModel",
     "ArtifactWriteResult",
     "NoOpArtifactStore",
+    "artifact_uri",
 )
 
 
-def _artifact_uri(store: Any, key: str) -> str:
+def artifact_uri(store: Any, key: str) -> str:
+    """The URI a store reports for ``key`` (``artifact_uri`` or ``uri``), or ``key`` itself for a store that reports none."""
     if hasattr(store, "artifact_uri"):
         return store.artifact_uri(key)
     if hasattr(store, "uri"):
@@ -184,7 +186,7 @@ class ArtifactExistsModel(CallableModel):
         exists = _artifact_exists(self.store, context.key)
         return ArtifactExistsResult(
             key=context.key,
-            uri=_artifact_uri(self.store, context.key),
+            uri=artifact_uri(self.store, context.key),
             exists=exists,
             status="exists" if exists else "missing",
             metadata=context.metadata,
@@ -204,7 +206,7 @@ class ArtifactWriteModel(CallableModel):
 
     @Flow.call
     def __call__(self, context: ArtifactWriteContext) -> ArtifactWriteResult:
-        uri = _artifact_uri(self.store, context.key)
+        uri = artifact_uri(self.store, context.key)
         if context.dry_run:
             status = "planned"
             metadata = dict(context.metadata)
@@ -236,7 +238,7 @@ class ArtifactReadModel(CallableModel):
     def __call__(self, context: ArtifactReadContext) -> ArtifactReadResult:
         return ArtifactReadResult(
             key=context.key,
-            uri=_artifact_uri(self.store, context.key),
+            uri=artifact_uri(self.store, context.key),
             payload=_artifact_read(self.store, context.key),
             status="read",
             metadata=context.metadata,
@@ -282,7 +284,7 @@ class ArtifactMaterializeModel(CallableModel):
     @Flow.call
     def __call__(self, context: ArtifactMaterializeContext) -> ArtifactMaterializeResult:
         path = context.path
-        uri = _artifact_uri(self.store, context.key)
+        uri = artifact_uri(self.store, context.key)
         metadata = dict(context.metadata)
         cached_identity = self._cached_identity(context.key, path) if not context.dry_run and path.exists() and not context.overwrite else None
         if context.dry_run:
@@ -332,7 +334,7 @@ class ArtifactWriteFileModel(CallableModel):
 
     @Flow.call
     def __call__(self, context: ArtifactWriteFileContext) -> ArtifactWriteFileResult:
-        uri = _artifact_uri(self.store, context.key)
+        uri = artifact_uri(self.store, context.key)
         metadata = dict(context.metadata)
         if context.dry_run:
             status = "planned"
@@ -380,7 +382,7 @@ class ArtifactPublishModel(CallableModel):
 
     @Flow.call
     def __call__(self, context: ArtifactPublishContext) -> ArtifactPublishResult:
-        uri = _artifact_uri(self.store, context.key)
+        uri = artifact_uri(self.store, context.key)
         if context.dry_run:
             status = "planned"
             metadata = dict(context.metadata)

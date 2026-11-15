@@ -7,7 +7,7 @@ import polars as pl
 import pytest
 from ccflow import ModelRegistry
 
-from ccflow_etl import DatasetDefinition, DatasetReadContext, DatasetReadModel, LocalFileOutput, WeekdayCalendar
+from ccflow_etl import DatasetDefinition, DatasetReadContext, DatasetReadModel, LocalFileOutput, WeekdayCalendar, artifact_uri, resolve_model
 
 
 def _dataset(tmp_path, **kwargs) -> DatasetDefinition:
@@ -91,6 +91,13 @@ def test_dataset_resolves_registry_paths_and_read_model_returns_lazy_frame(tmp_p
         dataset.write_frame(date(2025, 1, 6), pl.DataFrame({"value": [1]}))
 
         result = DatasetReadModel(dataset=dataset)(DatasetReadContext(start_date=date(2025, 1, 6), end_date=date(2025, 1, 6)))
+        store = registry["dataset_test_store"]
+
+        assert dataset.resolved_store() is store and resolve_model("/dataset_test_store") is store and resolve_model(store) is store
+        assert dataset.resolved_local_store() is None
+        assert dataset.key_prefix == "sample/"
+        assert artifact_uri(store, "sample/x.parquet") == dataset.uri(date(2025, 1, 6)).replace("2025-01-06", "x")
+        assert artifact_uri(None, "sample/x.parquet") == "sample/x.parquet"
 
         assert result.df.collect().to_native()["value"].to_list() == [1]
     finally:
