@@ -1,7 +1,9 @@
 import io
 import json
+from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from hashlib import sha256
+from pathlib import Path
 from typing import Any, Literal
 
 from ccflow import BaseModel, CallableModel, ContextBase, Flow, ModelRegistry
@@ -222,13 +224,13 @@ class DatasetDefinition(BaseModel):
             stores.insert(0, (self.resolved_local_store(), "transform"))
         return stores
 
-    def _write(self, key: str, payload: bytes, media_type: str, metadata: dict[str, Any], overwrite: bool) -> list[dict[str, Any]]:
+    def _write(self, key: str, put: Callable[[Any], Any], media_type: str, metadata: dict[str, Any], overwrite: bool) -> list[dict[str, Any]]:
         writes = []
         for store, stage in self._stores():
             if not overwrite and _artifact_exists(store, key):
                 status = "exists"
             else:
-                response = store.write(key, payload, media_type=media_type, metadata=metadata)
+                response = put(store)
                 status = str(response.get("status", "written")) if isinstance(response, dict) else "written"
             artifact = ETLArtifact(
                 key=key, stage=stage, status=status, dataset=self.name, uri=artifact_uri(store, key), media_type=media_type, metadata=metadata
@@ -238,7 +240,19 @@ class DatasetDefinition(BaseModel):
 
     def write_bytes(self, value: date, payload: bytes, metadata: dict[str, Any] | None = None, overwrite: bool = False) -> list[dict[str, Any]]:
         """Write one partition's payload to every store, skipping stores that already hold it unless ``overwrite``."""
-        return self._write(self.key(value), payload, self.resolved_media_type(), {"date": value.isoformat(), **(metadata or {})}, overwrite)
+        key, media_type, metadata = self.key(value), self.resolved_media_type(), {"date": value.isoformat(), **(metadata or {})}
+        return self._write(key, lambda store: store.write(key, payload, media_type=media_type, metadata=metadata), media_type, metadata, overwrite)
+
+    def write_file(self, value: date, path: str | Path, metadata: dict[str, Any] | None = None, overwrite: bool = False) -> list[dict[str, Any]]:
+        """Write one partition from a local file to every store, streaming it where the store has ``write_file``."""
+        key, media_type, metadata = self.key(value), self.resolved_media_type(), {"date": value.isoformat(), **(metadata or {})}
+
+        def put(store: Any) -> Any:
+            if hasattr(store, "write_file"):
+                return store.write_file(key, path, media_type=media_type, metadata=metadata)
+            return store.write(key, Path(path).read_bytes(), media_type=media_type, metadata=metadata)
+
+        return self._write(key, put, media_type, metadata, overwrite)
 
     def write_frame(self, value: date, frame: Any, lineage: dict[str, Any] | None = None, overwrite: bool = False) -> list[dict[str, Any]]:
         """Write a Polars or PyArrow frame as one Parquet partition, followed by its lineage sidecar."""
@@ -279,7 +293,14 @@ class DatasetDefinition(BaseModel):
                 **(lineage or {}),
             }
             sidecar_payload = (json.dumps(sidecar, indent=2, sort_keys=True, default=str) + "\n").encode()
-            writes += self._write(self.sidecar_key(value), sidecar_payload, "application/json", {"date": value.isoformat()}, overwrite)
+            key, sidecar_metadata = self.sidecar_key(value), {"date": value.isoformat()}
+            writes += self._write(
+                key,
+                lambda store: store.write(key, sidecar_payload, media_type="application/json", metadata=sidecar_metadata),
+                "application/json",
+                sidecar_metadata,
+                overwrite,
+            )
         return writes
 
     def read_bytes(self, value: date) -> bytes:

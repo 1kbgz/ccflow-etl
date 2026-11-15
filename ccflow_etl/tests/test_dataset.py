@@ -264,3 +264,23 @@ def test_dataset_checks_required_columns_for_nulls_before_applying_the_policy(tm
     assert dataset.read_frame(day).schema["note"] == pl.String
     with pytest.raises(ValueError, match="column 'ticker' has 1 nulls"):
         dataset.write_frame(date(2025, 1, 7), pl.DataFrame({"date": [date(2025, 1, 7)] * 2, "ticker": ["AAA", None], "note": ["x", "y"]}))
+
+
+def test_dataset_write_file_copies_a_local_file_to_every_store(tmp_path):
+    dataset = DatasetDefinition(
+        name="raw",
+        key_template="raw/{date}.csv.gz",
+        store=LocalFileOutput(path=tmp_path / "remote"),
+        local_store=LocalFileOutput(path=tmp_path / "local"),
+        format="csv.gz",
+    )
+    source = tmp_path / "staged.csv.gz"
+    source.write_bytes(b"payload")
+
+    writes = dataset.write_file(date(2025, 1, 6), source, metadata={"rows": 1})
+
+    assert [(write["stage"], write["status"]) for write in writes] == [("transform", "written"), ("load", "written")]
+    assert writes[-1]["metadata"] == {"date": "2025-01-06", "rows": 1}
+    assert (tmp_path / "remote" / "raw/2025-01-06.csv.gz").read_bytes() == b"payload"
+    assert (tmp_path / "local" / "raw/2025-01-06.csv.gz").read_bytes() == b"payload"
+    assert [write["status"] for write in dataset.write_file(date(2025, 1, 6), source)] == ["exists", "exists"]
