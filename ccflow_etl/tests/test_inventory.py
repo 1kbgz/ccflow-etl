@@ -125,6 +125,29 @@ def test_inventory_checks_only_the_latest_snapshot_when_asked(stores):
     assert latest.inventory(DAYS[0], DAYS[-2])["rebuild"] == [{"start_date": "2025-01-09", "end_date": "2025-01-09"}]
 
 
+def test_inventory_plans_partitions_without_required_sidecars(stores, tmp_path):
+    raw_store, curated_store = stores
+    raw = _raw(raw_store)
+    curated = _curated(curated_store, local_store=LocalFileOutput(path=tmp_path / "local"))
+    for value in DAYS[:3]:
+        raw_store.write(raw.key(value), b"close\n1\n")
+        _build(raw, curated, value)
+    # The first day keeps only its local sidecar; the second has none anywhere.
+    curated_store.file_path(curated.sidecar_key(DAYS[0])).unlink()
+    curated_store.file_path(curated.sidecar_key(DAYS[1])).unlink()
+    (tmp_path / "local" / curated.sidecar_key(DAYS[1])).unlink()
+
+    required = DatasetInventory(dataset=curated, require_sidecars=True).inventory(DAYS[0], DAYS[2])
+
+    assert required["sidecar_missing_count"] == 1 and required["sidecar_missing_ranges"] == [["2025-01-07", "2025-01-07"]]
+    assert required["rebuild"] == [{"start_date": "2025-01-07", "end_date": "2025-01-07"}]
+    assert DatasetInventory(dataset=curated).inventory(DAYS[0], DAYS[2])["sidecar_missing_count"] == 0
+    with pytest.raises(RuntimeError, match="bars: 0 missing, 1 without sidecars, 0 stale"):
+        DatasetPlanModel(datasets=[DatasetInventory(dataset=curated, require_sidecars=True)], fail_on_missing=True)(
+            {"start_date": DAYS[0], "end_date": DAYS[2]}
+        )
+
+
 def test_plan_model_explains_without_reading_and_fails_when_asked(stores):
     raw_store, curated_store = stores
     raw, curated = _raw(raw_store), _curated(curated_store)
@@ -137,6 +160,6 @@ def test_plan_model_explains_without_reading_and_fails_when_asked(stores):
     assert explained["status"] == "planned" and explained["datasets"][0]["expected_count"] == 5
     assert "missing_count" not in explained["datasets"][0]
     assert planned["status"] == "planned" and planned["datasets"][0]["rebuild"] == [{"start_date": "2025-01-06", "end_date": "2025-01-10"}]
-    with pytest.raises(RuntimeError, match="bars: 5 missing, 0 stale"):
+    with pytest.raises(RuntimeError, match="bars: 5 missing, 0 without sidecars, 0 stale"):
         DatasetPlanModel(datasets=[inventory], fail_on_missing=True)(context)
     assert DatasetPlanModel(datasets=[inventory], fail_on_stale=True)(context).value["status"] == "planned"

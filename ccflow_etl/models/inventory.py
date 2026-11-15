@@ -57,7 +57,8 @@ class DatasetInventory(BaseModel):
     A partition is stale when its lineage sidecar records a source object (any mapping with ``uri`` and ``etag``)
     whose URI is a partition of one of ``sources`` and whose ETag differs from that object's current ETag. A recorded
     source that no longer exists is reported as missing rather than stale, since rebuilding would need it. Present
-    partitions with no comparable source are counted as unverified.
+    partitions with no comparable source are counted as unverified. With ``require_sidecars``, a present partition
+    without its sidecar is reported as sidecar-missing and planned for rebuild.
 
     Each store is listed once per prefix. Sidecars are read from ``local_store`` where it holds them and from
     ``store`` otherwise, and only when ``sources`` is set. Current ETags come from the source store's
@@ -70,6 +71,7 @@ class DatasetInventory(BaseModel):
         default=False,
         description="Check only the last expected partition in the range, for datasets whose partitions are snapshots that supersede earlier ones.",
     )
+    require_sidecars: bool = Field(default=False, description="Treat a present partition without its lineage sidecar as needing a rebuild.")
 
     def _dates(self, start: date, end: date) -> list[date]:
         dates = self.dataset.partitions(start, end)
@@ -110,6 +112,8 @@ class DatasetInventory(BaseModel):
         local_keys = set(_listing(_resolve(dataset.local_store), prefix)) if dataset.local_store is not None else set()
         missing = {value for value in dates if dataset.key(value) not in stored}
         present = [value for value in dates if value not in missing]
+        sidecars = stored | local_keys
+        sidecar_missing = {value for value in present if dataset.sidecar_key(value) not in sidecars} if self.require_sidecars else set()
 
         stale: dict[date, list[str]] = {}
         source_missing: dict[date, list[str]] = {}
@@ -132,13 +136,15 @@ class DatasetInventory(BaseModel):
         else:
             unverified = len(present)
 
-        rebuild = missing | set(stale)
+        rebuild = missing | sidecar_missing | set(stale)
         return {
             "name": dataset.name,
             "expected_count": len(dates),
             "present_count": len(present),
             "missing_count": len(missing),
             "missing_ranges": _ranges(dates, missing),
+            "sidecar_missing_count": len(sidecar_missing),
+            "sidecar_missing_ranges": _ranges(dates, sidecar_missing),
             "stale_count": len(stale),
             "stale_ranges": _ranges(dates, set(stale)),
             "stale": [{"date": value.isoformat(), "sources": stale[value]} for value in dates if value in stale],
@@ -150,7 +156,7 @@ class DatasetInventory(BaseModel):
 
 
 class DatasetPlanModel(CallableModel):
-    """Plan which partitions of each dataset need building: missing ones and ones whose sources changed.
+    """Plan which partitions of each dataset need building: missing ones, ones missing a required sidecar, and ones whose sources changed.
 
     The result lists, per dataset, missing and stale date ranges and ``rebuild`` contexts (``start_date`` and
     ``end_date``) covering both, for the dataset's producing task to run. Nothing is built or written. Explain mode
@@ -185,9 +191,10 @@ class DatasetPlanModel(CallableModel):
             result["source_missing"] = result["source_missing"][: self.max_listed]
             results.append(result)
         failures = [
-            f"{result['name']}: {result['missing_count']} missing, {result['stale_count']} stale"
+            f"{result['name']}: {result['missing_count']} missing, {result['sidecar_missing_count']} without sidecars, {result['stale_count']} stale"
             for result in results
-            if (self.fail_on_missing and result["missing_count"]) or (self.fail_on_stale and result["stale_count"])
+            if (self.fail_on_missing and (result["missing_count"] or result["sidecar_missing_count"]))
+            or (self.fail_on_stale and result["stale_count"])
         ]
         if failures:
             raise RuntimeError(f"dataset plan {window['start_date']} to {window['end_date']} found partitions to rebuild: {'; '.join(failures)}")
