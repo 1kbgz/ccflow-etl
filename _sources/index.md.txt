@@ -76,6 +76,7 @@ cc-etl --config-path ./config --config-name text_stats +context.input_path=./not
 - Retry integration: compatibility exports for `ccflow` `RetryPolicy` and `RetryModel`; use `ccflow.evaluators.RetryEvaluator` for runtime evaluator retries.
 - Execution policy: `ExecutionPolicy` for shared max-concurrency hints and rate spacing that evaluators and connector models can consume through the `/execution` Hydra group.
 - Datasets: `DatasetDefinition` declares a date-partitioned dataset (key template, store, optional local copy, format, schema, and calendar of expected partitions) and provides keys, existence and missing-partition checks, explain records, writes with lineage sidecars, local-first reads, and Polars lazy scans over a date range (`pip install ccflow-etl[polars]`). Scans read Parquet partitions from each store's fsspec URL, local or object storage, after one listing per store. An optional expected Arrow schema, given as an fsspec-data reference or inline, is enforced on writes and lets a range be read as one scan (`pip install ccflow-etl[fsspec]`). `DatasetReadModel` exposes a range as a graph node.
+- Partition planning: `DatasetInventory` lists a dataset's store once and reports missing partitions and stale ones, whose lineage sidecar records a source object (`uri` and `etag`) that has since changed in one of the declared source datasets. `DatasetPlanModel` runs inventories over a date range and returns `rebuild` contexts (`start_date`, `end_date`) for producing tasks; it builds nothing, and explain mode reads nothing. Current ETags come from a store's `list_objects` listing (`ccflow-s3` `S3ArtifactStore`).
 - Run reporting: `RunSummary` for structured counts by status and artifact stage.
 
 ## Documentation
@@ -89,4 +90,4 @@ cc-etl --config-path ./config --config-name text_stats +context.input_path=./not
 
 ## Package Boundaries
 
-`ccflow-etl` owns domain-neutral ETL contracts, generic credential shapes, and helpers. It does not own application workflows, provider clients, connector clients, provider-specific credential semantics, dataset inventories, dataset-specific schemas, run reporting evaluators, checkpointing, or domain-specific rules. Durable store implementations should live in connector packages and integrate through generic cache and artifact IO contracts.
+`ccflow-etl` owns domain-neutral ETL contracts, generic credential shapes, and helpers. It does not own application workflows, provider clients, connector clients, provider-specific credential semantics, catalogs of which datasets exist, dataset-specific schemas, run reporting evaluators, checkpointing, or domain-specific rules. Durable store implementations should live in connector packages and integrate through generic cache and artifact IO contracts.
