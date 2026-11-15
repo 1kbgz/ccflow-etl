@@ -7,7 +7,7 @@ import polars as pl
 import pytest
 from ccflow import ModelRegistry
 
-from ccflow_etl import DatasetDefinition, DatasetReadContext, DatasetReadModel, LocalFileOutput, WeekdayCalendar
+from ccflow_etl import DatasetDefinition, DatasetReadContext, DatasetReadModel, LocalFileOutput, WeekdayCalendar, artifact_uri, resolve_model
 
 
 def _dataset(tmp_path, **kwargs) -> DatasetDefinition:
@@ -91,6 +91,13 @@ def test_dataset_resolves_registry_paths_and_read_model_returns_lazy_frame(tmp_p
         dataset.write_frame(date(2025, 1, 6), pl.DataFrame({"value": [1]}))
 
         result = DatasetReadModel(dataset=dataset)(DatasetReadContext(start_date=date(2025, 1, 6), end_date=date(2025, 1, 6)))
+        store = registry["dataset_test_store"]
+
+        assert dataset.resolved_store() is store and resolve_model("/dataset_test_store") is store and resolve_model(store) is store
+        assert dataset.resolved_local_store() is None
+        assert dataset.key_prefix == "sample/"
+        assert artifact_uri(store, "sample/x.parquet") == dataset.uri(date(2025, 1, 6)).replace("2025-01-06", "x")
+        assert artifact_uri(None, "sample/x.parquet") == "sample/x.parquet"
 
         assert result.df.collect().to_native()["value"].to_list() == [1]
     finally:
@@ -257,3 +264,23 @@ def test_dataset_checks_required_columns_for_nulls_before_applying_the_policy(tm
     assert dataset.read_frame(day).schema["note"] == pl.String
     with pytest.raises(ValueError, match="column 'ticker' has 1 nulls"):
         dataset.write_frame(date(2025, 1, 7), pl.DataFrame({"date": [date(2025, 1, 7)] * 2, "ticker": ["AAA", None], "note": ["x", "y"]}))
+
+
+def test_dataset_write_file_copies_a_local_file_to_every_store(tmp_path):
+    dataset = DatasetDefinition(
+        name="raw",
+        key_template="raw/{date}.csv.gz",
+        store=LocalFileOutput(path=tmp_path / "remote"),
+        local_store=LocalFileOutput(path=tmp_path / "local"),
+        format="csv.gz",
+    )
+    source = tmp_path / "staged.csv.gz"
+    source.write_bytes(b"payload")
+
+    writes = dataset.write_file(date(2025, 1, 6), source, metadata={"rows": 1})
+
+    assert [(write["stage"], write["status"]) for write in writes] == [("transform", "written"), ("load", "written")]
+    assert writes[-1]["metadata"] == {"date": "2025-01-06", "rows": 1}
+    assert (tmp_path / "remote" / "raw/2025-01-06.csv.gz").read_bytes() == b"payload"
+    assert (tmp_path / "local" / "raw/2025-01-06.csv.gz").read_bytes() == b"payload"
+    assert [write["status"] for write in dataset.write_file(date(2025, 1, 6), source)] == ["exists", "exists"]

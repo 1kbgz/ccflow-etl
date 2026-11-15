@@ -1,7 +1,9 @@
 import io
 import json
+from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from hashlib import sha256
+from pathlib import Path
 from typing import Any, Literal
 
 from ccflow import BaseModel, CallableModel, ContextBase, Flow, ModelRegistry
@@ -9,13 +11,14 @@ from ccflow.result.narwhals import NarwhalsFrameResult
 from pydantic import Field, PrivateAttr
 
 from .common import ETLArtifact, ETLStage
-from .output.artifact import _artifact_exists, _artifact_read, _artifact_uri
+from .output.artifact import _artifact_exists, _artifact_read, artifact_uri
 
 __all__ = (
     "DatasetDefinition",
     "DatasetFormat",
     "DatasetReadContext",
     "DatasetReadModel",
+    "resolve_model",
 )
 
 DatasetFormat = Literal["parquet", "json", "jsonl", "jsonl.gz", "csv", "csv.gz", "bytes"]
@@ -31,7 +34,8 @@ _MEDIA_TYPES: dict[str, str] = {
 }
 
 
-def _resolve(value: Any) -> Any:
+def resolve_model(value: Any) -> Any:
+    """The model registered at ``value`` when it is a registry path, otherwise ``value`` itself."""
     return ModelRegistry.root()[value] if isinstance(value, str) else value
 
 
@@ -156,6 +160,19 @@ class DatasetDefinition(BaseModel):
 
         return pl.DataFrame(resolved.schema.empty_table()).schema
 
+    @property
+    def key_prefix(self) -> str:
+        """The part of ``key_template`` before its first placeholder, which every partition key starts with."""
+        return self.key_template.split("{", 1)[0]
+
+    def resolved_store(self) -> Any:
+        """``store``, resolved from the model registry when it is a registry path."""
+        return resolve_model(self.store)
+
+    def resolved_local_store(self) -> Any:
+        """``local_store``, resolved from the model registry when it is a registry path, or None."""
+        return resolve_model(self.local_store)
+
     def key(self, value: date) -> str:
         return self.key_template.format(
             date=value.isoformat(), year=f"{value.year:04d}", month=f"{value.month:02d}", day=f"{value.day:02d}", ymd=value.strftime("%Y%m%d")
@@ -167,13 +184,13 @@ class DatasetDefinition(BaseModel):
         return f"{key.removesuffix(suffix) if key.endswith(suffix) else key}.metadata.json"
 
     def uri(self, value: date) -> str:
-        return _artifact_uri(_resolve(self.store), self.key(value))
+        return artifact_uri(self.resolved_store(), self.key(value))
 
     def resolved_media_type(self) -> str:
         return self.media_type or _MEDIA_TYPES[self.format]
 
     def exists(self, value: date) -> bool:
-        return _artifact_exists(_resolve(self.store), self.key(value))
+        return _artifact_exists(self.resolved_store(), self.key(value))
 
     def partitions(self, start: date, end: date) -> list[date]:
         start = max(start, self.first_date) if self.first_date else start
@@ -181,7 +198,7 @@ class DatasetDefinition(BaseModel):
             return []
         if self.calendar is None:
             return [start + timedelta(days=offset) for offset in range((end - start).days + 1)]
-        calendar = _resolve(self.calendar)
+        calendar = resolve_model(self.calendar)
         if hasattr(calendar, "business_days"):
             return list(calendar.business_days(start, end))
         return [step.date() if isinstance(step, datetime) else step for step in calendar.steps(start, end)]
@@ -202,28 +219,40 @@ class DatasetDefinition(BaseModel):
         }
 
     def _stores(self) -> list[tuple[Any, ETLStage]]:
-        stores: list[tuple[Any, ETLStage]] = [(_resolve(self.store), "load")]
+        stores: list[tuple[Any, ETLStage]] = [(self.resolved_store(), "load")]
         if self.local_store is not None:
-            stores.insert(0, (_resolve(self.local_store), "transform"))
+            stores.insert(0, (self.resolved_local_store(), "transform"))
         return stores
 
-    def _write(self, key: str, payload: bytes, media_type: str, metadata: dict[str, Any], overwrite: bool) -> list[dict[str, Any]]:
+    def _write(self, key: str, put: Callable[[Any], Any], media_type: str, metadata: dict[str, Any], overwrite: bool) -> list[dict[str, Any]]:
         writes = []
         for store, stage in self._stores():
             if not overwrite and _artifact_exists(store, key):
                 status = "exists"
             else:
-                response = store.write(key, payload, media_type=media_type, metadata=metadata)
+                response = put(store)
                 status = str(response.get("status", "written")) if isinstance(response, dict) else "written"
             artifact = ETLArtifact(
-                key=key, stage=stage, status=status, dataset=self.name, uri=_artifact_uri(store, key), media_type=media_type, metadata=metadata
+                key=key, stage=stage, status=status, dataset=self.name, uri=artifact_uri(store, key), media_type=media_type, metadata=metadata
             )
             writes.append(artifact.model_dump(mode="json"))
         return writes
 
     def write_bytes(self, value: date, payload: bytes, metadata: dict[str, Any] | None = None, overwrite: bool = False) -> list[dict[str, Any]]:
         """Write one partition's payload to every store, skipping stores that already hold it unless ``overwrite``."""
-        return self._write(self.key(value), payload, self.resolved_media_type(), {"date": value.isoformat(), **(metadata or {})}, overwrite)
+        key, media_type, metadata = self.key(value), self.resolved_media_type(), {"date": value.isoformat(), **(metadata or {})}
+        return self._write(key, lambda store: store.write(key, payload, media_type=media_type, metadata=metadata), media_type, metadata, overwrite)
+
+    def write_file(self, value: date, path: str | Path, metadata: dict[str, Any] | None = None, overwrite: bool = False) -> list[dict[str, Any]]:
+        """Write one partition from a local file to every store, streaming it where the store has ``write_file``."""
+        key, media_type, metadata = self.key(value), self.resolved_media_type(), {"date": value.isoformat(), **(metadata or {})}
+
+        def put(store: Any) -> Any:
+            if hasattr(store, "write_file"):
+                return store.write_file(key, path, media_type=media_type, metadata=metadata)
+            return store.write(key, Path(path).read_bytes(), media_type=media_type, metadata=metadata)
+
+        return self._write(key, put, media_type, metadata, overwrite)
 
     def write_frame(self, value: date, frame: Any, lineage: dict[str, Any] | None = None, overwrite: bool = False) -> list[dict[str, Any]]:
         """Write a Polars or PyArrow frame as one Parquet partition, followed by its lineage sidecar."""
@@ -264,19 +293,26 @@ class DatasetDefinition(BaseModel):
                 **(lineage or {}),
             }
             sidecar_payload = (json.dumps(sidecar, indent=2, sort_keys=True, default=str) + "\n").encode()
-            writes += self._write(self.sidecar_key(value), sidecar_payload, "application/json", {"date": value.isoformat()}, overwrite)
+            key, sidecar_metadata = self.sidecar_key(value), {"date": value.isoformat()}
+            writes += self._write(
+                key,
+                lambda store: store.write(key, sidecar_payload, media_type="application/json", metadata=sidecar_metadata),
+                "application/json",
+                sidecar_metadata,
+                overwrite,
+            )
         return writes
 
     def read_bytes(self, value: date) -> bytes:
         key = self.key(value)
         if self.local_store is not None:
-            local = _resolve(self.local_store)
+            local = self.resolved_local_store()
             if _artifact_exists(local, key):
                 return _artifact_read(local, key)
-            payload = _artifact_read(_resolve(self.store), key)
+            payload = _artifact_read(self.resolved_store(), key)
             local.write(key, payload, media_type=self.resolved_media_type(), metadata={"date": value.isoformat()})
             return payload
-        return _artifact_read(_resolve(self.store), key)
+        return _artifact_read(self.resolved_store(), key)
 
     def _frame(self, payload: bytes, value: date) -> Any:
         import polars as pl
@@ -302,7 +338,7 @@ class DatasetDefinition(BaseModel):
         keys = {value: self.key(value) for value in dates}
         list_keys = getattr(store, "list_keys", None)
         if list_keys is not None:
-            available = set(list_keys(self.key_template.split("{", 1)[0]))
+            available = set(list_keys(self.key_prefix))
         else:
             available = {key for key in keys.values() if _artifact_exists(store, key)}
         return [value for value in dates if keys[value] in available]
@@ -350,8 +386,8 @@ class DatasetDefinition(BaseModel):
         import polars as pl
 
         remaining = self.partitions(start, end)
-        stores = [_resolve(self.local_store)] if self.local_store is not None else []
-        stores.append(_resolve(self.store))
+        stores = [self.resolved_local_store()] if self.local_store is not None else []
+        stores.append(self.resolved_store())
         frames = []
         for store in stores:
             if not remaining:
