@@ -107,6 +107,24 @@ def test_inventory_counts_partitions_it_cannot_verify(stores, tmp_path):
     assert DatasetInventory(dataset=curated).inventory(DAYS[0], DAYS[1])["unverified_count"] == 2
 
 
+def test_inventory_checks_only_the_latest_snapshot_when_asked(stores):
+    raw_store, curated_store = stores
+    raw, curated = _raw(raw_store), _curated(curated_store)
+    for value in DAYS:
+        raw_store.write(raw.key(value), f"close\n{value.day}\n".encode())
+    # Only the newest snapshot and one older one exist, and the older one's source has changed since.
+    _build(raw, curated, DAYS[1])
+    _build(raw, curated, DAYS[-1])
+    raw_store.write(raw.key(DAYS[1]), b"close\n99\n")
+
+    latest = DatasetInventory(dataset=curated, sources=[raw], latest_only=True)
+
+    assert latest.plan(DAYS[0], DAYS[-1])["expected_count"] == 1
+    result = latest.inventory(DAYS[0], DAYS[-1])
+    assert (result["expected_count"], result["missing_count"], result["stale_count"], result["rebuild"]) == (1, 0, 0, [])
+    assert latest.inventory(DAYS[0], DAYS[-2])["rebuild"] == [{"start_date": "2025-01-09", "end_date": "2025-01-09"}]
+
+
 def test_plan_model_explains_without_reading_and_fails_when_asked(stores):
     raw_store, curated_store = stores
     raw, curated = _raw(raw_store), _curated(curated_store)

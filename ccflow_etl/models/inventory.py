@@ -66,12 +66,20 @@ class DatasetInventory(BaseModel):
 
     dataset: DatasetDefinition
     sources: list[DatasetDefinition] = Field(default_factory=list, description="Datasets whose objects the sidecars record as sources.")
+    latest_only: bool = Field(
+        default=False,
+        description="Check only the last expected partition in the range, for datasets whose partitions are snapshots that supersede earlier ones.",
+    )
+
+    def _dates(self, start: date, end: date) -> list[date]:
+        dates = self.dataset.partitions(start, end)
+        return dates[-1:] if self.latest_only else dates
 
     def plan(self, start: date, end: date) -> dict[str, Any]:
         """Explain record: the expected partitions and the listings an inventory would make, without reading anything."""
         return {
             "name": self.dataset.name,
-            "expected_count": len(self.dataset.partitions(start, end)),
+            "expected_count": len(self._dates(start, end)),
             "prefix": _artifact_uri(_resolve(self.dataset.store), _prefix(self.dataset)),
             "sources": [_artifact_uri(_resolve(source.store), _prefix(source)) for source in self.sources],
         }
@@ -96,7 +104,7 @@ class DatasetInventory(BaseModel):
 
     def inventory(self, start: date, end: date) -> dict[str, Any]:
         dataset = self.dataset
-        dates = dataset.partitions(start, end)
+        dates = self._dates(start, end)
         prefix = _prefix(dataset)
         stored = set(_listing(_resolve(dataset.store), prefix))
         local_keys = set(_listing(_resolve(dataset.local_store), prefix)) if dataset.local_store is not None else set()
